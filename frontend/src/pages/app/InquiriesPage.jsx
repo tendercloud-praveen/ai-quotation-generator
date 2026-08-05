@@ -1,15 +1,16 @@
 import { useMemo, useRef, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import {
-  FileText, Plus, Sparkles, ArrowRight, Upload, Trash2, Eye,
+  FileText, Plus, Sparkles, Upload, Trash2, Eye,
   Camera, File as FileIcon, X, RefreshCw, CheckCircle2, Image as ImageIcon,
+  Save, Send,
 } from 'lucide-react';
 import PageHeader from '../../components/PageHeader';
 import Breadcrumbs from '../../components/Breadcrumbs';
 import { Card } from '../../components/Card';
 import Button from '../../components/Button';
 import Modal from '../../components/Modal';
-import { Select, Textarea } from '../../components/Field';
+import { Textarea } from '../../components/Field';
 import Badge from '../../components/Badge';
 import DataTable from '../../components/DataTable';
 import SearchBar from '../../components/SearchBar';
@@ -17,9 +18,10 @@ import EmptyState from '../../components/EmptyState';
 import { ConfirmDialog } from '../../components/ConfirmDialog';
 import { useToast } from '../../components/Toast';
 import { useStore } from '../../lib/useStore';
-import { getInquiries, addInquiry, updateInquiry, deleteInquiry, getCustomers } from '../../lib/data';
-import { aiMatch } from '../../lib/ai';
-import { formatDate } from '../../lib/validate';
+import { getInquiries, addInquiry, updateInquiry, deleteInquiry } from '../../lib/data';
+import { addQuotation } from '../../lib/data';
+import { aiMatch, buildQuotationLines } from '../../lib/ai';
+import { formatINR, formatDate } from '../../lib/validate';
 import { useRole } from '../../lib/RoleContext';
 
 const SAMPLE_INQUIRIES = [
@@ -79,11 +81,12 @@ export default function InquiriesPage() {
   const [search, setSearch] = useState('');
   const [statusFilter, setStatusFilter] = useState('all');
   const [modalOpen, setModalOpen] = useState(false);
-  const [form, setForm] = useState({ customerId: '', text: '' });
+  const [form, setForm] = useState({ text: '' });
   const [errors, setErrors] = useState({});
   const [aiResult, setAiResult] = useState(null);
   const [aiLoading, setAiLoading] = useState(false);
   const [processing, setProcessing] = useState(false);
+  const [lines, setLines] = useState([]);
   const [deleteId, setDeleteId] = useState(null);
   const [viewInquiry, setViewInquiry] = useState(null);
 
@@ -95,17 +98,15 @@ export default function InquiriesPage() {
   const fileInputRef = useRef(null);
 
   const inquiries = getInquiries();
-  const customers = getCustomers();
 
   const filtered = useMemo(() => {
     return inquiries.filter((i) => {
       const mine = effectiveRole === 'sales_rep' ? i.salesRepId === user.id : true;
-      const cust = customers.find((c) => c.id === i.customerId);
-      const matches = !search || i.text.toLowerCase().includes(search.toLowerCase()) || (cust?.name || '').toLowerCase().includes(search.toLowerCase());
+      const matches = !search || i.text.toLowerCase().includes(search.toLowerCase());
       const statusOk = statusFilter === 'all' || i.status === statusFilter;
       return mine && matches && statusOk;
     });
-  }, [inquiries, customers, search, statusFilter, effectiveRole, user.id]);
+  }, [inquiries, search, statusFilter, effectiveRole, user.id]);
 
   const validateFile = (f) => {
     if (!f) return 'No file selected.';
@@ -139,13 +140,13 @@ export default function InquiriesPage() {
     setTimeout(() => {
       const result = aiMatch(form.text);
       setAiResult(result);
+      setLines(buildQuotationLines(result.matches));
       setAiLoading(false);
       toast.success(`AI matched ${result.matches.length} products with ${Math.round(result.confidence * 100)}% confidence.`);
     }, 900);
   };
 
   const processInquiry = () => {
-    if (!form.customerId) { setErrors({ customerId: 'Select a customer' }); return; }
     if (!form.text.trim() && !file) { setErrors({ text: 'Enter inquiry text or upload a file' }); return; }
     setProcessing(true);
     // Placeholder extraction — in production this would call an OCR/AI service.
@@ -160,23 +161,48 @@ export default function InquiriesPage() {
     }, 1200);
   };
 
-  const save = () => {
-    const e = {};
-    if (!form.customerId) e.customerId = 'Select a customer';
-    if (!form.text.trim()) e.text = 'Inquiry text is required';
-    setErrors(e);
-    if (Object.keys(e).length) return;
-    const inq = addInquiry({ customerId: form.customerId, text: form.text, salesRepId: user.id });
-    if (aiResult) updateInquiry(inq.id, { status: 'processed', aiMatch: aiResult });
-    toast.success('Inquiry created. AI match complete!');
+  const updateLine = (idx, patch) => {
+    setLines((ls) => ls.map((l, i) => {
+      if (i !== idx) return l;
+      const next = { ...l, ...patch };
+      next.total = next.sellingPrice * next.qty;
+      next.margin = (next.sellingPrice - next.costPrice) * next.qty;
+      return next;
+    }));
+  };
+
+  const removeLine = (idx) => setLines((ls) => ls.filter((_, i) => i !== idx));
+
+  const calcTotals = (ls) => {
+    const subtotal = ls.reduce((s, l) => s + l.total, 0);
+    const tax = Math.round(subtotal * 0.18);
+    return { subtotal, tax, grandTotal: subtotal + tax };
+  };
+
+  const createQuotationFromInquiry = (status = 'draft') => {
+    if (lines.length === 0) { toast.error('Run AI match or add products first.'); return; }
+    const { subtotal, tax, grandTotal } = calcTotals(lines);
+    const inq = addInquiry({ text: form.text, salesRepId: user.id, status: 'processed', aiMatch: aiResult });
+    const q = addQuotation({
+      inquiryId: inq.id,
+      customerId: null,
+      salesRepId: user.id,
+      lines,
+      subtotal, taxRate: 18, tax, grandTotal,
+      status,
+      comments: '',
+      aiMatch: aiResult,
+    });
+    toast.success(status === 'pending_approval' ? 'Quotation submitted for approval!' : 'Draft quotation saved.');
     closeModal();
     navigate('/app/quotations');
   };
 
   const closeModal = () => {
     setModalOpen(false);
-    setForm({ customerId: '', text: '' });
+    setForm({ text: '' });
     setAiResult(null);
+    setLines([]);
     setErrors({});
     removeFile();
     setProcessing(false);
@@ -185,11 +211,7 @@ export default function InquiriesPage() {
   const remove = () => { deleteInquiry(deleteId); toast.success('Inquiry deleted.'); setDeleteId(null); };
 
   const columns = [
-    { key: 'customer', header: 'Customer', sortable: true, render: (i) => {
-      const c = customers.find((x) => x.id === i.customerId);
-      return <span className="font-medium text-slate-700 dark:text-slate-200">{c?.name || '—'}</span>;
-    }},
-    { key: 'text', header: 'Inquiry', render: (i) => <span className="text-slate-600 dark:text-slate-300 truncate max-w-[300px] block">{i.text}</span> },
+    { key: 'text', header: 'Inquiry', render: (i) => <span className="text-slate-600 dark:text-slate-300 truncate max-w-[400px] block">{i.text}</span> },
     { key: 'status', header: 'Status', sortable: true, render: (i) => <Badge tone={i.status === 'processed' ? 'success' : 'warning'} dot>{i.status === 'processed' ? 'Processed' : 'New'}</Badge> },
     { key: 'createdAt', header: 'Created', sortable: true, render: (i) => <span className="text-slate-500 dark:text-slate-400">{formatDate(i.createdAt)}</span> },
   ];
@@ -197,7 +219,7 @@ export default function InquiriesPage() {
   return (
     <div className="space-y-6">
       <Breadcrumbs items={[{ label: 'Inquiries' }]} />
-      <PageHeader title="Inquiries" subtitle="Capture customer inquiries and run AI product matching." actions={<Button onClick={() => { setForm({ customerId: '', text: '' }); setAiResult(null); setErrors({}); removeFile(); setModalOpen(true); }}><Plus size={16} /> New Inquiry</Button>} />
+      <PageHeader title="Inquiries" subtitle="Capture customer inquiries and run AI product matching." actions={<Button onClick={() => { setForm({ text: '' }); setAiResult(null); setLines([]); setErrors({}); removeFile(); setModalOpen(true); }}><Plus size={16} /> New Inquiry</Button>} />
 
       <div className="flex flex-col sm:flex-row gap-3 sm:items-center sm:justify-between">
         <SearchBar value={search} onChange={setSearch} placeholder="Search inquiries…" />
@@ -224,7 +246,7 @@ export default function InquiriesPage() {
       </Card>
 
       {/* New Inquiry Modal */}
-      <Modal open={modalOpen} onClose={closeModal} title="New Inquiry" subtitle="Describe the customer's requirement — AI will match products." size="xl" footer={
+      <Modal open={modalOpen} onClose={closeModal} title="New Inquiry" subtitle="Describe the requirement — AI will match products." size="xl" footer={
         <div className="flex flex-col sm:flex-row gap-2 sm:gap-2 w-full sm:w-auto sm:justify-end">
           <Button variant="secondary" onClick={closeModal} className="w-full sm:w-auto">Cancel</Button>
           {!aiResult && (
@@ -235,15 +257,15 @@ export default function InquiriesPage() {
           {aiResult && (
             <Button variant="outline" onClick={runAi} loading={aiLoading} className="w-full sm:w-auto"><Sparkles size={16} /> Re-run Match</Button>
           )}
-          <Button onClick={save} className="w-full sm:w-auto">Create & Continue</Button>
+          {aiResult && (
+            <>
+              <Button variant="secondary" onClick={() => createQuotationFromInquiry('draft')} className="w-full sm:w-auto"><Save size={16} /> Save Draft</Button>
+              <Button onClick={() => createQuotationFromInquiry('pending_approval')} className="w-full sm:w-auto"><Send size={16} /> Submit for Approval</Button>
+            </>
+          )}
         </div>
       }>
         <div className="space-y-5">
-          <Select label="Customer" value={form.customerId} onChange={(e) => setForm({ ...form, customerId: e.target.value })} error={errors.customerId} required>
-            <option value="">Select a customer…</option>
-            {customers.map((c) => <option key={c.id} value={c.id}>{c.name}</option>)}
-          </Select>
-
           <div>
             <div className="flex items-center justify-between mb-1.5">
               <label className="text-sm font-medium text-slate-700 dark:text-slate-300">Inquiry Text<span className="text-red-500 ml-0.5">*</span></label>
@@ -289,7 +311,7 @@ export default function InquiriesPage() {
             </div>
           )}
 
-          {/* AI Match results */}
+          {/* AI Match loading */}
           {aiLoading && !processing && (
             <div className="rounded-xl bg-brand-50 dark:bg-brand-950/40 border border-brand-200 dark:border-brand-800 p-4">
               <div className="flex items-center gap-3">
@@ -299,6 +321,7 @@ export default function InquiriesPage() {
             </div>
           )}
 
+          {/* AI Match results — editable */}
           {aiResult && !aiLoading && !processing && (
             <div className="rounded-xl bg-emerald-50 dark:bg-emerald-950/40 border border-emerald-200 dark:border-emerald-800 p-4 animate-scale-in">
               <div className="flex items-center justify-between mb-3">
@@ -308,24 +331,46 @@ export default function InquiriesPage() {
                 </div>
                 <Badge tone="success">{Math.round(aiResult.confidence * 100)}% confidence</Badge>
               </div>
-              {aiResult.matches.length === 0 ? (
+              {lines.length === 0 ? (
                 <p className="text-sm text-emerald-700 dark:text-emerald-300">No matching products found. Try rephrasing the inquiry.</p>
               ) : (
-                <div className="space-y-2">
-                  {aiResult.matches.map((m, i) => (
-                    <div key={i} className="flex items-center justify-between bg-white dark:bg-slate-900 rounded-lg px-3 py-2.5 border border-emerald-100 dark:border-emerald-900">
-                      <div className="flex items-center gap-3 min-w-0">
-                        <span className="font-mono text-xs font-semibold text-brand-600 shrink-0">{m.product.sku}</span>
-                        <span className="text-sm text-slate-700 dark:text-slate-200 truncate">{m.product.name}</span>
-                      </div>
-                      <div className="flex items-center gap-3 shrink-0">
-                        <Badge tone="default">Qty: {m.qty}</Badge>
-                        <span className="text-sm font-semibold text-slate-700 dark:text-slate-200">₹{m.product.sellingPrice.toLocaleString('en-IN')}</span>
-                      </div>
+                <>
+                  <p className="text-xs text-emerald-600 dark:text-emerald-400 mb-2">Review and adjust quantities or prices as needed.</p>
+                  <div className="overflow-x-auto rounded-lg border border-emerald-100 dark:border-emerald-900">
+                    <table className="w-full text-sm">
+                      <thead className="bg-white dark:bg-slate-900 text-xs uppercase text-slate-500 dark:text-slate-400">
+                        <tr>
+                          <th className="px-3 py-2 text-left">Product</th>
+                          <th className="px-3 py-2 text-right">Qty</th>
+                          <th className="px-3 py-2 text-right">Selling Price</th>
+                          <th className="px-3 py-2 text-right">Total</th>
+                          <th className="px-3 py-2"></th>
+                        </tr>
+                      </thead>
+                      <tbody>
+                        {lines.map((l, i) => (
+                          <tr key={i} className="border-t border-emerald-100 dark:border-emerald-900 bg-white dark:bg-slate-900">
+                            <td className="px-3 py-2">
+                              <p className="font-medium text-slate-700 dark:text-slate-200">{l.name}</p>
+                              <p className="text-xs text-slate-400 font-mono">{l.sku}</p>
+                            </td>
+                            <td className="px-3 py-2 text-right"><input type="number" min="1" value={l.qty} onChange={(e) => updateLine(i, { qty: Math.max(1, +e.target.value) })} className="w-16 text-right rounded border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-800 px-2 py-1 text-sm" /></td>
+                            <td className="px-3 py-2 text-right"><input type="number" value={l.sellingPrice} onChange={(e) => updateLine(i, { sellingPrice: +e.target.value })} className="w-24 text-right rounded border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-800 px-2 py-1 text-sm" /></td>
+                            <td className="px-3 py-2 text-right font-semibold text-slate-700 dark:text-slate-200">{formatINR(l.total)}</td>
+                            <td className="px-3 py-2 text-right"><button onClick={() => removeLine(i)} className="text-slate-400 hover:text-red-500"><Trash2 size={14} /></button></td>
+                          </tr>
+                        ))}
+                      </tbody>
+                    </table>
+                  </div>
+                  <div className="mt-3 flex justify-end">
+                    <div className="text-right space-y-1">
+                      <p className="text-sm text-slate-500 dark:text-slate-400">Subtotal: <span className="font-semibold text-slate-700 dark:text-slate-200">{formatINR(calcTotals(lines).subtotal)}</span></p>
+                      <p className="text-sm text-slate-500 dark:text-slate-400">GST (18%): <span className="font-semibold text-slate-700 dark:text-slate-200">{formatINR(calcTotals(lines).tax)}</span></p>
+                      <p className="text-base text-slate-800 dark:text-slate-100 font-bold">Grand Total: {formatINR(calcTotals(lines).grandTotal)}</p>
                     </div>
-                  ))}
-                  <p className="text-xs text-emerald-600 dark:text-emerald-400 pt-1">Click "Create & Continue" to generate a quotation from these matches.</p>
-                </div>
+                  </div>
+                </>
               )}
             </div>
           )}
@@ -386,14 +431,10 @@ export default function InquiriesPage() {
         {viewInquiry && (
           <div className="space-y-4">
             <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-              <div><p className="text-xs text-slate-400">Customer</p><p className="font-medium text-slate-700 dark:text-slate-200">{customers.find((c) => c.id === viewInquiry.customerId)?.name || '—'}</p></div>
               <div><p className="text-xs text-slate-400">Status</p><Badge tone={viewInquiry.status === 'processed' ? 'success' : 'warning'} dot>{viewInquiry.status === 'processed' ? 'Processed' : 'New'}</Badge></div>
               <div><p className="text-xs text-slate-400">Created</p><p className="font-medium text-slate-700 dark:text-slate-200">{formatDate(viewInquiry.createdAt)}</p></div>
             </div>
             <div><p className="text-xs text-slate-400 mb-1">Inquiry Text</p><div className="rounded-lg bg-slate-50 dark:bg-slate-800 p-3 text-sm text-slate-700 dark:text-slate-200">{viewInquiry.text}</div></div>
-            <div className="flex justify-end">
-              <Button onClick={() => { setViewInquiry(null); navigate('/app/quotations'); }}>Generate Quotation <ArrowRight size={16} /></Button>
-            </div>
           </div>
         )}
       </Modal>

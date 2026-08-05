@@ -1,8 +1,8 @@
 from fastapi import APIRouter, Depends
+from fastapi.security import OAuth2PasswordRequestForm
 from sqlalchemy.orm import Session
 
 from app.database.database import get_db
-from app.schemas.login import LoginUser
 from app.services.login_service import LoginService
 
 router = APIRouter(
@@ -12,7 +12,7 @@ router = APIRouter(
 
 @router.post("/login")
 def login(
-    user: LoginUser,
+    form_data: OAuth2PasswordRequestForm = Depends(),
     db: Session = Depends(get_db)
 ):
-    return LoginService.login_user(db, user)
+    return LoginService.login_user(db, form_data)
