@@ -5,6 +5,7 @@ from app.models.user import User
 from app.models.company import Company
 from app.repositories.user_repository import UserRepository
 from app.schemas.user import UserRegister, CreateUser
+from app.services.email_service import EmailService
 
 
 class UserService:
@@ -53,7 +54,11 @@ class UserService:
             company_id=company.id
         )
 
-        return UserRepository.create_user(db, new_user)
+        created_user = UserRepository.create_user(db, new_user)
+
+        EmailService.send_account_created_email(created_user)
+
+        return created_user  
 
     @staticmethod
     def create_user(db: Session, user: CreateUser):
