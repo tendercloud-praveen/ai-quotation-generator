@@ -10,10 +10,8 @@ export const NAV_ITEMS = [
 
   // Admin-only
   { to: '/app/users', label: 'Users', icon: Users, roles: ['admin'] },
-  { to: '/app/products', label: 'Products', icon: Package, roles: ['admin'] },
+  { to: '/app/products', label: 'Products', icon: Package, roles: ['admin', 'manager', 'sales_rep'] },
   { to: '/app/customers', label: 'Customers', icon: Building2, roles: ['admin'] },
-  { to: '/app/inquiries', label: 'Inquiries', icon: FileText, roles: ['admin'] },
-  { to: '/app/quotations', label: 'Quotations', icon: FileCheck2, roles: ['admin'] },
   { to: '/app/approvals', label: 'Approvals', icon: ClipboardCheck, roles: ['admin'] },
 
   // Admin + Manager
@@ -52,7 +50,7 @@ export const ROLE_HOME = {
 export const ROUTE_ROLES = {
   dashboard: ['admin', 'manager', 'sales_rep'],
   users: ['admin'],
-  products: ['admin'],
+  products: ['admin', 'manager', 'sales_rep'],
   customers: ['admin'],
   inquiries: ['admin', 'sales_rep'],
   quotations: ['admin', 'sales_rep'],

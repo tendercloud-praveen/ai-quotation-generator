@@ -11,3 +11,4 @@ class Company(Base):
     company_name = Column(String, nullable=False, unique=True)
 
     users = relationship("User", back_populates="company")
+    products = relationship("Product", back_populates="company")

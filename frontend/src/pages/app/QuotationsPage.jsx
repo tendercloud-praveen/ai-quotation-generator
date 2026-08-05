@@ -1,8 +1,8 @@
 import { useMemo, useState, useEffect } from 'react';
 import { useNavigate, useSearchParams } from 'react-router-dom';
 import {
-  FileCheck2, Plus, Sparkles, Eye, Download, Send, Pencil, Trash2,
-  ArrowRight, FileText, CheckCircle2, XCircle, Clock, MessageSquare, Save,
+  FileCheck2, Eye, Download, Send, Pencil, Trash2,
+  FileText, CheckCircle2, XCircle, Clock, Save,
 } from 'lucide-react';
 import PageHeader from '../../components/PageHeader';
 import Breadcrumbs from '../../components/Breadcrumbs';
@@ -18,12 +18,11 @@ import { ConfirmDialog } from '../../components/ConfirmDialog';
 import { useToast } from '../../components/Toast';
 import { useStore } from '../../lib/useStore';
 import {
-  getQuotations, addQuotation, updateQuotation, deleteQuotation,
-  getCustomers, getInquiries, getProducts,
+  getQuotations, updateQuotation, deleteQuotation,
+  getCustomers, getInquiries,
 } from '../../lib/data';
 import { getManagers } from '../../lib/users';
 import { addNotification } from '../../lib/notifications';
-import { aiMatch, buildQuotationLines } from '../../lib/ai';
 import { formatINR, formatDate, formatDateTime } from '../../lib/validate';
 import { useRole } from '../../lib/RoleContext';
 import { generateQuotationPDF } from '../../lib/pdf';
@@ -50,7 +49,6 @@ export default function QuotationsPage() {
     if (s === 'all') setSearchParams({});
     else setSearchParams({ status: s });
   };
-  const [createOpen, setCreateOpen] = useState(false);
   const [viewId, setViewId] = useState(null);
   const [editId, setEditId] = useState(null);
   const [deleteId, setDeleteId] = useState(null);
@@ -62,13 +60,6 @@ export default function QuotationsPage() {
   const quotations = getQuotations();
   const customers = getCustomers();
   const inquiries = getInquiries();
-  const products = getProducts();
-
-  // Create form state
-  const [createForm, setCreateForm] = useState({ inquiryId: '', customerId: '' });
-  const [aiResult, setAiResult] = useState(null);
-  const [aiLoading, setAiLoading] = useState(false);
-  const [lines, setLines] = useState([]);
 
   // Edit state
   const [editLines, setEditLines] = useState([]);
@@ -88,70 +79,6 @@ export default function QuotationsPage() {
       return mine && matches && statusOk;
     });
   }, [quotations, customers, search, statusFilter, effectiveRole, user.id]);
-
-  const openCreate = () => {
-    setCreateForm({ inquiryId: '', customerId: '' });
-    setAiResult(null);
-    setLines([]);
-    setCreateOpen(true);
-  };
-
-  const onInquiryChange = (inquiryId) => {
-    const inq = inquiries.find((i) => i.id === inquiryId);
-    setCreateForm({ inquiryId, customerId: inq?.customerId || '' });
-    setAiResult(null);
-    setLines([]);
-  };
-
-  const runAi = () => {
-    const inq = inquiries.find((i) => i.id === createForm.inquiryId);
-    if (!inq) { toast.error('Select an inquiry first.'); return; }
-    setAiLoading(true);
-    setTimeout(() => {
-      const result = aiMatch(inq.text);
-      setAiResult(result);
-      setLines(buildQuotationLines(result.matches));
-      setAiLoading(false);
-      toast.success(`AI matched ${result.matches.length} products.`);
-    }, 900);
-  };
-
-  const updateLine = (idx, patch) => {
-    setLines((ls) => ls.map((l, i) => {
-      if (i !== idx) return l;
-      const next = { ...l, ...patch };
-      next.total = next.sellingPrice * next.qty;
-      next.margin = (next.sellingPrice - next.costPrice) * next.qty;
-      return next;
-    }));
-  };
-
-  const removeLine = (idx) => setLines((ls) => ls.filter((_, i) => i !== idx));
-
-  const calcTotals = (ls) => {
-    const subtotal = ls.reduce((s, l) => s + l.total, 0);
-    const tax = Math.round(subtotal * 0.18);
-    return { subtotal, tax, grandTotal: subtotal + tax };
-  };
-
-  const createQuotation = (status = 'draft') => {
-    if (!createForm.inquiryId) { toast.error('Select an inquiry.'); return; }
-    if (lines.length === 0) { toast.error('Run AI match or add products first.'); return; }
-    const { subtotal, tax, grandTotal } = calcTotals(lines);
-    const q = addQuotation({
-      inquiryId: createForm.inquiryId,
-      customerId: createForm.customerId,
-      salesRepId: user.id,
-      lines,
-      subtotal, taxRate: 18, tax, grandTotal,
-      status,
-      comments: '',
-      aiMatch: aiResult,
-    });
-    toast.success(status === 'pending_approval' ? 'Quotation submitted for approval!' : 'Draft quotation saved.');
-    setCreateOpen(false);
-    setViewId(q.id);
-  };
 
   const submitForApproval = (q) => {
     if (managers.length === 0) { toast.error('No managers available to approve. Ask your admin to create a manager account.'); return; }
@@ -237,7 +164,7 @@ export default function QuotationsPage() {
   return (
     <div className="space-y-6">
       <Breadcrumbs items={[{ label: 'Quotations' }]} />
-      <PageHeader title="Quotations" subtitle="Generate, track, and dispatch quotations through the approval workflow." actions={<Button onClick={openCreate}><Plus size={16} /> New Quotation</Button>} />
+      <PageHeader title="Quotations" subtitle="Track and manage quotations through the approval workflow." />
 
       <div className="flex flex-col sm:flex-row gap-3 sm:items-center sm:justify-between">
         <SearchBar value={search} onChange={setSearch} placeholder="Search by customer…" />
@@ -252,100 +179,26 @@ export default function QuotationsPage() {
 
       <Card>
         {filtered.length === 0 ? (
-          <EmptyState icon={FileCheck2} title="No quotations found" description="Create a quotation from an inquiry to get started." action={<Button onClick={openCreate}><Plus size={16} /> New Quotation</Button>} />
+          <EmptyState icon={FileCheck2} title="No quotations found" description="Create a quotation from the Inquiries page to get started." />
         ) : (
           <DataTable columns={columns} rows={filtered} pageSize={8} actions={(q) => (
             <div className="flex items-center justify-end gap-1">
               <button onClick={() => setViewId(q.id)} className="p-1.5 rounded-lg text-slate-400 hover:bg-brand-50 hover:text-brand-600 dark:hover:bg-brand-950/40 transition" title="View"><Eye size={16} /></button>
               <button onClick={() => downloadPDF(q)} className="p-1.5 rounded-lg text-slate-400 hover:bg-blue-50 hover:text-blue-600 dark:hover:bg-blue-950/40 transition" title="Download PDF"><Download size={16} /></button>
               {q.status === 'draft' && (
-                <button onClick={() => submitForApproval(q)} className="p-1.5 rounded-lg text-slate-400 hover:bg-amber-50 hover:text-amber-600 dark:hover:bg-amber-950/40 transition" title="Submit for Approval"><Send size={16} /></button>
+                <>
+                  <button onClick={() => submitForApproval(q)} className="p-1.5 rounded-lg text-slate-400 hover:bg-amber-50 hover:text-amber-600 dark:hover:bg-amber-950/40 transition" title="Submit for Approval"><Send size={16} /></button>
+                  <button onClick={() => openEdit(q)} className="p-1.5 rounded-lg text-slate-400 hover:bg-brand-50 hover:text-brand-600 dark:hover:bg-brand-950/40 transition" title="Edit"><Pencil size={16} /></button>
+                  <button onClick={() => setDeleteId(q.id)} className="p-1.5 rounded-lg text-slate-400 hover:bg-red-50 hover:text-red-600 dark:hover:bg-red-950/40 transition" title="Delete"><Trash2 size={16} /></button>
+                </>
               )}
               {q.status === 'approved' && (
                 <button onClick={() => dispatch(q)} className="p-1.5 rounded-lg text-slate-400 hover:bg-emerald-50 hover:text-emerald-600 dark:hover:bg-emerald-950/40 transition" title="Dispatch"><Send size={16} /></button>
               )}
-              <button onClick={() => openEdit(q)} className="p-1.5 rounded-lg text-slate-400 hover:bg-brand-50 hover:text-brand-600 dark:hover:bg-brand-950/40 transition" title="Edit"><Pencil size={16} /></button>
-              <button onClick={() => setDeleteId(q.id)} className="p-1.5 rounded-lg text-slate-400 hover:bg-red-50 hover:text-red-600 dark:hover:bg-red-950/40 transition" title="Delete"><Trash2 size={16} /></button>
             </div>
           )} />
         )}
       </Card>
-
-      {/* Create Quotation Modal */}
-      <Modal open={createOpen} onClose={() => setCreateOpen(false)} title="Generate Quotation" subtitle="Select an inquiry, run AI match, review and create." size="xl" footer={
-        <>
-          <Button variant="secondary" onClick={() => setCreateOpen(false)}>Cancel</Button>
-          <Button variant="outline" onClick={runAi} loading={aiLoading}><Sparkles size={16} /> AI Match</Button>
-          <Button variant="secondary" onClick={() => createQuotation('draft')}>Save Draft</Button>
-          <Button onClick={() => createQuotation('pending_approval')}>Submit for Approval</Button>
-        </>
-      }>
-        <div className="space-y-4">
-          <Select label="Select Inquiry" value={createForm.inquiryId} onChange={(e) => onInquiryChange(e.target.value)} required>
-            <option value="">Choose an inquiry…</option>
-            {inquiries.map((i) => {
-              const c = customers.find((x) => x.id === i.customerId);
-              return <option key={i.id} value={i.id}>{c?.name} — {i.text.slice(0, 50)}…</option>;
-            })}
-          </Select>
-
-          {createForm.inquiryId && (
-            <div className="rounded-lg bg-slate-50 dark:bg-slate-800 p-3 text-sm text-slate-600 dark:text-slate-300">
-              {inquiries.find((i) => i.id === createForm.inquiryId)?.text}
-            </div>
-          )}
-
-          {aiLoading && (
-            <div className="rounded-xl bg-brand-50 dark:bg-brand-950/40 border border-brand-200 dark:border-brand-800 p-4 flex items-center gap-3">
-              <div className="animate-spin h-5 w-5 rounded-full border-2 border-brand-500 border-t-transparent" />
-              <p className="text-sm font-medium text-brand-700 dark:text-brand-300">AI matching products…</p>
-            </div>
-          )}
-
-          {aiResult && !aiLoading && (
-            <div>
-              <div className="flex items-center justify-between mb-2">
-                <span className="text-sm font-semibold text-slate-700 dark:text-slate-200">Matched Products ({lines.length})</span>
-                <span className="text-xs text-slate-400">Adjust qty & price as needed</span>
-              </div>
-              <div className="overflow-x-auto rounded-lg border border-slate-200 dark:border-slate-700">
-                <table className="w-full text-sm">
-                  <thead className="bg-slate-50 dark:bg-slate-800 text-xs uppercase text-slate-500 dark:text-slate-400">
-                    <tr>
-                      <th className="px-3 py-2 text-left">Product</th>
-                      <th className="px-3 py-2 text-right">Qty</th>
-                      <th className="px-3 py-2 text-right">Selling Price</th>
-                      <th className="px-3 py-2 text-right">Total</th>
-                      <th className="px-3 py-2"></th>
-                    </tr>
-                  </thead>
-                  <tbody>
-                    {lines.map((l, i) => (
-                      <tr key={i} className="border-t border-slate-100 dark:border-slate-800">
-                        <td className="px-3 py-2">
-                          <p className="font-medium text-slate-700 dark:text-slate-200">{l.name}</p>
-                          <p className="text-xs text-slate-400 font-mono">{l.sku}</p>
-                        </td>
-                        <td className="px-3 py-2 text-right"><input type="number" min="1" value={l.qty} onChange={(e) => updateLine(i, { qty: Math.max(1, +e.target.value) })} className="w-16 text-right rounded border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-800 px-2 py-1 text-sm" /></td>
-                        <td className="px-3 py-2 text-right"><input type="number" value={l.sellingPrice} onChange={(e) => updateLine(i, { sellingPrice: +e.target.value })} className="w-24 text-right rounded border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-800 px-2 py-1 text-sm" /></td>
-                        <td className="px-3 py-2 text-right font-semibold text-slate-700 dark:text-slate-200">{formatINR(l.total)}</td>
-                        <td className="px-3 py-2 text-right"><button onClick={() => removeLine(i)} className="text-slate-400 hover:text-red-500"><Trash2 size={14} /></button></td>
-                      </tr>
-                    ))}
-                  </tbody>
-                </table>
-              </div>
-              <div className="mt-3 flex justify-end">
-                <div className="text-right space-y-1">
-                  <p className="text-sm text-slate-500 dark:text-slate-400">Subtotal: <span className="font-semibold text-slate-700 dark:text-slate-200">{formatINR(calcTotals(lines).subtotal)}</span></p>
-                  <p className="text-sm text-slate-500 dark:text-slate-400">GST (18%): <span className="font-semibold text-slate-700 dark:text-slate-200">{formatINR(calcTotals(lines).tax)}</span></p>
-                  <p className="text-base text-slate-800 dark:text-slate-100 font-bold">Grand Total: {formatINR(calcTotals(lines).grandTotal)}</p>
-                </div>
-              </div>
-            </div>
-          )}
-        </div>
-      </Modal>
 
       {/* View Quotation Modal */}
       <Modal open={!!viewId} onClose={() => setViewId(null)} title="Quotation Details" size="xl" footer={
