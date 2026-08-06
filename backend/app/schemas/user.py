@@ -17,3 +17,11 @@ class CreateUser(BaseModel):
     mobile_number: str
     password: str
     role: str
+
+
+class UpdateUser(BaseModel):
+    full_name: str
+    email: EmailStr
+    mobile_number: str
+    role: str
+    is_active: bool
