@@ -4,7 +4,7 @@ from sqlalchemy.orm import Session
 from app.models.user import User
 from app.models.company import Company
 from app.repositories.user_repository import UserRepository
-from app.schemas.user import UserRegister, CreateUser
+from app.schemas.user import UserRegister, CreateUser, UpdateUser
 from app.services.email_service import EmailService
 
 
@@ -58,7 +58,7 @@ class UserService:
 
         EmailService.send_account_created_email(created_user)
 
-        return created_user  
+        return created_user
 
     @staticmethod
     def create_user(db: Session, user: CreateUser):
@@ -106,3 +106,49 @@ class UserService:
         )
 
         return UserRepository.create_user(db, new_user)
+
+    @staticmethod
+    def get_user_by_id(db: Session, user_id: int):
+
+        user = UserRepository.get_user_by_id(db, user_id)
+
+        if not user:
+            raise HTTPException(
+                status_code=404,
+                detail="User not found"
+            )
+
+        return user
+
+    @staticmethod
+    def update_user(db: Session, user_id: int, user_data: UpdateUser):
+
+        user = UserRepository.get_user_by_id(db, user_id)
+
+        if not user:
+            raise HTTPException(
+                status_code=404,
+                detail="User not found"
+            )
+
+        user.full_name = user_data.full_name
+        user.email = user_data.email
+        user.mobile_number = user_data.mobile_number
+        user.role = user_data.role
+        user.is_active = user_data.is_active
+
+        return UserRepository.update_user(db, user)
+
+
+    @staticmethod
+    def delete_user(db: Session, user_id: int):
+
+     user = UserRepository.get_user_by_id(db, user_id)
+
+     if not user:
+        raise HTTPException(
+            status_code=404,
+            detail="User not found"
+        )
+
+     UserRepository.delete_user(db, user)
