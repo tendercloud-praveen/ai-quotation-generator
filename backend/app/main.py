@@ -6,6 +6,8 @@ from app.api.user import router as user_router
 from app.api.login import router as login_router
 from app.models.login_history import LoginHistory
 from app.api.product import router as product_router
+from app.api.forgot_password import router as forgot_password_router
+from app.models.otp import OTP 
 
 app = FastAPI()
 
@@ -15,4 +17,5 @@ def read_root():
 app.include_router(user_router)
 app.include_router(login_router)
 app.include_router(product_router)
+app.include_router(forgot_password_router)
 Base.metadata.create_all(bind=engine)
