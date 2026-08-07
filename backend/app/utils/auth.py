@@ -61,3 +61,17 @@ def get_current_user(
         raise credentials_exception
 
     return user
+
+
+
+
+def get_current_admin(
+    current_user: User = Depends(get_current_user)
+):
+    if current_user.role.lower() != "admin":
+        raise HTTPException(
+            status_code=status.HTTP_403_FORBIDDEN,
+            detail="Only Admin can access this resource"
+        )
+
+    return current_user
