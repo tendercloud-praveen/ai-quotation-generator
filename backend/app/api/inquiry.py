@@ -7,6 +7,9 @@ from app.database.database import get_db
 from app.utils.auth import get_current_user
 from app.models.user import User
 
+from app.ai.ocr import process_input
+
+
 router = APIRouter(
     prefix="/inquiries",
     tags=["Inquiry"]
@@ -20,28 +23,24 @@ async def extract_text(
     current_user: User = Depends(get_current_user),
     db: Session = Depends(get_db)
 ):
-    # User entered text
-    if text:
+
+    # Check whether user provided text or file
+    if not text and not file:
         return {
-            "status": "success",
-            "user_id": current_user.id,
-            "email": current_user.email,
-            "input_type": "text",
-            "text": text
+            "status": "failed",
+            "message": "Please enter text or upload a file."
         }
 
-    # User uploaded a file
-    if file:
-        return {
-            "status": "success",
-            "user_id": current_user.id,
-            "email": current_user.email,
-            "input_type": "file",
-            "file_name": file.filename,
-            "content_type": file.content_type
-        }
+    # Send text/file to OCR file
+    result = await process_input(
+        text=text,
+        file=file
+    )
 
     return {
-        "status": "failed",
-        "message": "Please enter text or upload a file."
+        "status": "success",
+        "user_id": current_user.id,
+        "email": current_user.email,
+        "input_type": "text" if text else "file",
+        "result": result
     }

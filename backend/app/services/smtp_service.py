@@ -16,8 +16,8 @@ class SMTPService:
 
         sender_email = os.getenv("SMTP_EMAIL")
         sender_password = os.getenv("SMTP_PASSWORD")
-        smtp_server = os.getenv("SMTP_SERVER")
-        smtp_port = int(os.getenv("SMTP_PORT"))
+        smtp_server = os.getenv("SMTP_HOST")
+        smtp_port = int(os.getenv("SMTP_PORT", "587"))
 
         message = MIMEMultipart()
         message["From"] = sender_email
