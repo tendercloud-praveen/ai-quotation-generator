@@ -9,6 +9,8 @@ import tempfile
 import os
 import io
 
+from app.ai.embedding import generate_embedding
+
 
 # ==========================================
 # TESSERACT CONFIGURATION
@@ -28,7 +30,8 @@ def preprocess_text(text: str) -> str:
     text = text.strip()
 
     text = " ".join(text.split())
-    print(text)
+
+    print(f"Preprocessed text: {text}")
 
     return text
 
@@ -49,6 +52,11 @@ async def process_input(
     if text:
 
         result = preprocess_text(text)
+
+        # Generate embedding
+        embedding = generate_embedding(result)
+
+        print("Embedding size:", len(embedding))
 
         return result
 
@@ -154,15 +162,32 @@ async def process_input(
             )
 
 
-
-        print("EXTRACTED TEXT:")
-        print(extracted_text)
-
-
+        # ----------------------------------
+        # PREPROCESS TEXT
+        # ----------------------------------
 
         result = preprocess_text(
             extracted_text
         )
+
+        print("Preprocessed text:", result)
+
+
+        # ----------------------------------
+        # GENERATE EMBEDDING
+        # ----------------------------------
+
+        embedding = generate_embedding(
+            result
+        )
+
+        print("Embedding size:", len(embedding))
+        print("Embedding:", embedding)
+
+
+        # ----------------------------------
+        # RETURN TEXT
+        # ----------------------------------
 
         return result
 
