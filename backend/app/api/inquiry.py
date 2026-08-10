@@ -26,14 +26,20 @@ async def extract_text(
     db: Session = Depends(get_db)
 ):
 
-    # Check whether user provided text or file
+    # ==========================================
+    # 1. Check whether user provided text or file
+    # ==========================================
+
     if not text and not file:
         return {
             "status": "failed",
             "message": "Please enter text or upload a file."
         }
 
-    # Process input and generate embedding
+    # ==========================================
+    # 2. Process input and generate embedding
+    # ==========================================
+
     result = await process_input(
         text=text,
         file=file
@@ -42,22 +48,33 @@ async def extract_text(
     # Get the user's query embedding
     query_embedding = result["embedding"]
 
-    # Search similar products in Qdrant
+    # ==========================================
+    # 3. Search similar products in Qdrant
+    # ==========================================
+
     similar_products = search_products(
         query_embedding,
         top_k=1
     )
 
-    # Get product IDs from Qdrant
+    # ==========================================
+    # 4. Get product IDs from Qdrant
+    # ==========================================
+
     product_ids = [
         product.payload.get("product_id")
         for product in similar_products
     ]
 
-    # Fetch complete product details from PostgreSQL
+    # ==========================================
+    # 5. Fetch complete product details
+    #    from PostgreSQL
+    # ==========================================
+
     products = []
 
     for product_id in product_ids:
+
         product = (
             db.query(Product)
             .filter(Product.id == product_id)
@@ -67,8 +84,12 @@ async def extract_text(
         if product:
             products.append(product)
 
-    # Print Qdrant results for testing
+    # ==========================================
+    # 6. Print Qdrant results for testing
+    # ==========================================
+
     for product in similar_products:
+
         print(
             "Product ID:",
             product.payload.get("product_id"),
@@ -76,13 +97,24 @@ async def extract_text(
             product.score
         )
 
-    # Return response
+    # ==========================================
+    # 7. Return response
+    # ==========================================
+
     return {
         "status": "success",
+
         "user_id": current_user.id,
+
         "email": current_user.email,
+
         "input_type": "text" if text else "file",
+
         "query": result["text"],
+
+        # --------------------------------------
+        # Qdrant results
+        # --------------------------------------
 
         "similar_products": [
             {
@@ -92,13 +124,17 @@ async def extract_text(
             for product in similar_products
         ],
 
+        # --------------------------------------
+        # PostgreSQL complete products
+        # --------------------------------------
+
         "products": [
             {
                 "product_id": product.id,
                 "product_name": product.product_name,
                 "category": product.category,
                 "description": product.description,
-                "price": product.price,
+                "selling_price": product.selling_price,
                 "unit": product.unit
             }
             for product in products
