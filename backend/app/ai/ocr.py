@@ -3,8 +3,20 @@ from typing import Optional
 from fastapi import UploadFile
 import fitz
 from docx import Document
+from PIL import Image
+import pytesseract
 import tempfile
 import os
+import io
+
+
+# ==========================================
+# TESSERACT CONFIGURATION
+# ==========================================
+
+pytesseract.pytesseract.tesseract_cmd = (
+    r"C:\Program Files\Tesseract-OCR\tesseract.exe"
+)
 
 
 # ==========================================
@@ -16,7 +28,7 @@ def preprocess_text(text: str) -> str:
     text = text.strip()
 
     text = " ".join(text.split())
-    # print(text)
+    print(text)
 
     return text
 
@@ -36,26 +48,32 @@ async def process_input(
 
     if text:
 
-        # print("USER TEXT:")
-        # print(text)
-
-        # Pass user text to preprocessing
         result = preprocess_text(text)
 
         return result
 
 
+    # --------------------------------------
+    # CASE 2: User uploaded file
+    # --------------------------------------
 
     if file:
-
-       
 
         content = await file.read()
 
 
+        # ----------------------------------
+        # TXT
+        # ----------------------------------
+
         if file.content_type == "text/plain":
 
             extracted_text = content.decode("utf-8")
+
+
+        # ----------------------------------
+        # PDF
+        # ----------------------------------
 
         elif file.content_type == "application/pdf":
 
@@ -99,14 +117,48 @@ async def process_input(
             os.remove(temp_path)
 
 
+        # ----------------------------------
+        # IMAGE → TESSERACT OCR
+        # ----------------------------------
+
+        elif file.content_type in [
+            "image/jpeg",
+            "image/jpg",
+            "image/png",
+            "image/bmp",
+            "image/tiff",
+            "image/webp"
+        ]:
+
+            print("Processing image with Tesseract OCR...")
+
+            image = Image.open(
+                io.BytesIO(content)
+            )
+
+            extracted_text = pytesseract.image_to_string(
+                image,
+                lang="eng",
+                config="--oem 3 --psm 6"
+            )
+
+
+        # ----------------------------------
+        # UNSUPPORTED FILE
+        # ----------------------------------
+
         else:
 
             raise ValueError(
                 f"Unsupported file type: {file.content_type}"
             )
 
+
+
         print("EXTRACTED TEXT:")
         print(extracted_text)
+
+
 
         result = preprocess_text(
             extracted_text
@@ -116,4 +168,3 @@ async def process_input(
 
 
     return None
-       
