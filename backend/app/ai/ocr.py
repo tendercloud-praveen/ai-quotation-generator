@@ -58,7 +58,11 @@ async def process_input(
 
         print("Embedding size:", len(embedding))
 
-        return result
+        # Return BOTH text and embedding
+        return {
+            "text": result,
+            "embedding": embedding
+        }
 
 
     # --------------------------------------
@@ -182,14 +186,20 @@ async def process_input(
         )
 
         print("Embedding size:", len(embedding))
-        print("Embedding:", embedding)
 
 
         # ----------------------------------
-        # RETURN TEXT
+        # RETURN TEXT + EMBEDDING
         # ----------------------------------
 
-        return result
+        return {
+            "text": result,
+            "embedding": embedding
+        }
 
+
+    # --------------------------------------
+    # NO INPUT
+    # --------------------------------------
 
     return None
