@@ -7,6 +7,7 @@ from app.models.user import User
 from app.database.database import get_db
 from app.schemas.user import UserRegister, CreateUser, UpdateUser
 from app.services.user_service import UserService
+from app.utils.auth import get_current_user
 
 router = APIRouter(
     prefix="/users",
@@ -32,9 +33,10 @@ def register(
 def create_user(
     user: CreateUser,
     db: Session = Depends(get_db),
-    current_admin: User = Depends(get_current_admin)
+    current_admin: User = Depends(get_current_admin),
+    current_user: User = Depends(get_current_user)
 ):
-    created_user = UserService.create_user(db, user)
+    created_user = UserService.create_user(db, user, current_user)
 
     return {
         "message": "User Created Successfully",
@@ -46,7 +48,8 @@ def create_user(
 def get_user(
     user_id: int,
     db: Session = Depends(get_db),
-    current_admin: User = Depends(get_current_admin)
+    current_admin: User = Depends(get_current_admin),
+    current_user: User = Depends(get_current_user)
 ):
     user = UserService.get_user_by_id(db, user_id)
 
