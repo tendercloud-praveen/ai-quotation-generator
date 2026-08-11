@@ -56,7 +56,7 @@ async def process_input(
         # Generate embedding
         embedding = generate_embedding(result)
 
-        print("Embedding size:", len(embedding))
+        
 
         # Return BOTH text and embedding
         return {
@@ -65,27 +65,21 @@ async def process_input(
         }
 
 
-    # --------------------------------------
-    # CASE 2: User uploaded file
-    # --------------------------------------
+   
 
     if file:
 
         content = await file.read()
 
 
-        # ----------------------------------
-        # TXT
-        # ----------------------------------
+      
 
         if file.content_type == "text/plain":
 
             extracted_text = content.decode("utf-8")
 
 
-        # ----------------------------------
-        # PDF
-        # ----------------------------------
+       
 
         elif file.content_type == "application/pdf":
 
@@ -102,9 +96,7 @@ async def process_input(
             pdf.close()
 
 
-        # ----------------------------------
-        # DOCX
-        # ----------------------------------
+     
 
         elif file.content_type == (
             "application/vnd.openxmlformats-officedocument."
@@ -129,9 +121,7 @@ async def process_input(
             os.remove(temp_path)
 
 
-        # ----------------------------------
-        # IMAGE → TESSERACT OCR
-        # ----------------------------------
+   
 
         elif file.content_type in [
             "image/jpeg",
@@ -155,9 +145,6 @@ async def process_input(
             )
 
 
-        # ----------------------------------
-        # UNSUPPORTED FILE
-        # ----------------------------------
 
         else:
 
@@ -166,9 +153,7 @@ async def process_input(
             )
 
 
-        # ----------------------------------
-        # PREPROCESS TEXT
-        # ----------------------------------
+       
 
         result = preprocess_text(
             extracted_text
@@ -177,9 +162,7 @@ async def process_input(
         print("Preprocessed text:", result)
 
 
-        # ----------------------------------
-        # GENERATE EMBEDDING
-        # ----------------------------------
+
 
         embedding = generate_embedding(
             result
@@ -188,9 +171,7 @@ async def process_input(
         print("Embedding size:", len(embedding))
 
 
-        # ----------------------------------
-        # RETURN TEXT + EMBEDDING
-        # ----------------------------------
+  
 
         return {
             "text": result,
@@ -198,8 +179,6 @@ async def process_input(
         }
 
 
-    # --------------------------------------
-    # NO INPUT
-    # --------------------------------------
+
 
     return None
