@@ -6,11 +6,14 @@ from app.models.product import Product
 from app.schemas.product_schema import ProductCreate, ProductResponse
 from app.models.user import User
 from app.utils.auth import get_current_user
-from app.ai.embedding import generate_embedding
-from app.ai.qdrant import create_collection, store_product_embedding
+
+from app.ai.product_embedding import create_product_embedding
 
 
-router = APIRouter(prefix="/products", tags=["Products"])
+router = APIRouter(
+    prefix="/products",
+    tags=["Products"]
+)
 
 
 @router.post("/", response_model=ProductResponse)
@@ -20,7 +23,8 @@ def create_product(
     current_user: User = Depends(get_current_user)
 ):
 
-    # Step 1: Save product to PostgreSQL
+    # 1. Save product to PostgreSQL
+
     new_product = Product(
         sku=product.sku,
         category=product.category,
@@ -28,9 +32,8 @@ def create_product(
         unit=product.unit,
         cost_price=product.cost_price,
         selling_price=product.selling_price,
+        gst_percentage=product.gst_percentage,
         description=product.description,
-
-        # Temporary value
         company_id=current_user.company_id
     )
 
@@ -39,34 +42,11 @@ def create_product(
     db.refresh(new_product)
 
 
-    # Step 2: Create searchable text
-    search_text = (
-        f"{new_product.product_name} "
-        f"{new_product.category} "
-        f"{new_product.description}"
-    )
+    # 2. Create embedding and store in Qdrant
 
-    print("Search Text:", search_text)
+    create_product_embedding(new_product)
 
 
-    # Step 3: Generate embedding
-    embedding = generate_embedding(search_text)
-
-    print("Embedding generated")
-    print("Vector length:", len(embedding))
-    print("Embedding:", embedding)
-
-
-    # Step 4: Store vector + Product ID in Qdrant
-    create_collection()
-
-    store_product_embedding(
-    new_product.id,
-    embedding,
-    search_text
-)
-
-    print("Vector stored in Qdrant")
-
+    # 3. Return product
 
     return new_product

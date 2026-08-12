@@ -7,6 +7,7 @@ class ProductCreate(BaseModel):
     product_name: str
     unit: str
     cost_price: float
+    gst_percentage: float
     selling_price: float
     description: str
 
