@@ -247,6 +247,7 @@ import { useToast } from "../../components/Toast";
 
 import { validateEmail } from "../../lib/validate";
 import { loginUser } from "../../services/documentservice";
+import { setSession } from "../../lib/auth";
 
 export default function LoginPage() {
   const toast = useToast();
@@ -418,22 +419,48 @@ export default function LoginPage() {
 
       console.log("LOGIN RESPONSE:", response);
 
-      // Backend returned 200, so login succeeded.
+      // Make sure backend returned authentication data
+      if (!response?.access_token) {
+        throw new Error("Login succeeded but access token was not returned.");
+      }
+
+      // Create frontend session
+      const loggedInUser = {
+        id: response.id,
+        fullName: response.full_name,
+        email: response.email,
+        role: response.role?.toLowerCase(),
+        companyId: response.company_id,
+      };
+
+      console.log("SAVING SESSION:", loggedInUser);
+
+      setSession(response.access_token, loggedInUser);
+
+      console.log("SESSION SAVED:", localStorage.getItem("quotaai:session"));
+
       toast.success(response?.message || "Login successful");
 
-      console.log("Navigating to dashboard...");
-
+      // Navigate after session has been created
       navigate("/app/dashboard", {
         replace: true,
       });
     } catch (error) {
       console.error("LOGIN ERROR:", error);
 
-      toast.error(
-        error?.response?.data?.detail ||
-          error?.response?.data?.message ||
-          "Invalid Email or Password",
-      );
+      const detail = error?.response?.data?.detail;
+
+      let message = "Invalid Email or Password";
+
+      if (Array.isArray(detail)) {
+        message = detail[0]?.msg || message;
+      } else if (detail) {
+        message = detail;
+      } else if (error.message) {
+        message = error.message;
+      }
+
+      toast.error(message);
     } finally {
       setLoading(false);
     }

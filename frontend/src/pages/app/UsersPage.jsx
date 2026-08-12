@@ -239,6 +239,7 @@ import {
 import { ROLE_LABELS } from "../../lib/nav";
 import { useRole } from "../../lib/RoleContext";
 import {
+  fetchUsersApi,
   getUserByIdApi,
   createUserApi,
   updateUserApi,
@@ -246,6 +247,7 @@ import {
 } from "../../services/userService";
 
 const empty = {
+  companyName: "",
   fullName: "",
   email: "",
   mobile: "",
@@ -275,11 +277,30 @@ export default function UsersPage() {
   const loadUsers = async () => {
     try {
       setLoading(true);
-      const data = await getUserByIdApi();
-      setUsers(data || []);
+
+      const response = await fetchUsersApi();
+
+      console.log("USERS API RESPONSE:", response);
+
+      const usersData = response?.data || [];
+
+      const normalizedUsers = usersData.map((u) => ({
+        id: u.id,
+        companyName: u.company_name,
+        fullName: u.full_name,
+        email: u.email,
+        mobile: u.mobile_number,
+        role: u.role?.toLowerCase(),
+        status: u.is_active ? "active" : "disabled",
+        createdAt: u.created_at || null,
+      }));
+
+      setUsers(normalizedUsers);
     } catch (err) {
-      toast.error("Failed to load users from database.");
       console.error("Fetch users error:", err);
+      console.error("Backend response:", err.response?.data);
+
+      toast.error("Failed to load users from database.");
     } finally {
       setLoading(false);
     }
@@ -321,27 +342,46 @@ export default function UsersPage() {
 
   const validate = () => {
     const e = {};
-    if (!form.fullName?.trim()) e.fullName = "Full name is required";
-    if (!form.email?.trim()) e.email = "Email is required";
-    else if (!validateEmail(form.email))
+
+    if (!form.companyName?.trim()) {
+      e.companyName = "Company name is required";
+    }
+
+    if (!form.fullName?.trim()) {
+      e.fullName = "Full name is required";
+    }
+
+    if (!form.email?.trim()) {
+      e.email = "Email is required";
+    } else if (!validateEmail(form.email)) {
       e.email = "Enter a valid email address";
-    else if (
+    } else if (
       !editing &&
       users.find((u) => u.email?.toLowerCase() === form.email.toLowerCase())
-    )
+    ) {
       e.email = "An account with this email already exists";
+    }
 
-    if (!form.mobile?.trim()) e.mobile = "Mobile number is required";
-    else if (!validateMobile(form.mobile))
+    if (!form.mobile?.trim()) {
+      e.mobile = "Mobile number is required";
+    } else if (!validateMobile(form.mobile)) {
       e.mobile = "Mobile must be exactly 10 digits";
+    }
 
     if (!editing || form.password) {
-      if (!form.password) e.password = "Password is required";
-      else if (!validateStrongPassword(form.password))
+      if (!form.password) {
+        e.password = "Password is required";
+      } else if (!validateStrongPassword(form.password)) {
         e.password = "8+ chars with upper, lower, number & symbol";
-      if (form.confirm !== form.password) e.confirm = "Passwords do not match";
+      }
+
+      if (form.confirm !== form.password) {
+        e.confirm = "Passwords do not match";
+      }
     }
+
     setErrors(e);
+
     return Object.keys(e).length === 0;
   };
 
@@ -351,23 +391,28 @@ export default function UsersPage() {
       setIsSubmitting(true);
       if (editing) {
         const patch = {
-          fullName: form.fullName,
+          full_name: form.fullName,
           email: form.email,
-          mobile: form.mobile,
+          mobile_number: form.mobile,
           role: form.role,
-          status: form.status,
+          is_active: form.status === "active",
         };
-        if (form.password) patch.password = form.password;
+
+        if (form.password) {
+          patch.password = form.password;
+        }
 
         await updateUserApi(editing.id, patch);
+
         toast.success("User updated successfully.");
       } else {
         const payload = {
-          fullName: form.fullName,
+          company_name: form.companyName,
+          full_name: form.fullName,
           email: form.email,
-          mobile: form.mobile,
-          role: form.role,
+          mobile_number: form.mobile,
           password: form.password,
+          role: form.role,
         };
         await createUserApi(payload);
         toast.success(`${ROLE_LABELS[form.role]} account created in database.`);
@@ -578,6 +623,13 @@ export default function UsersPage() {
         }
       >
         <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+          <Input
+            label="Company Name"
+            value={form.companyName}
+            onChange={(e) => set("companyName", e.target.value)}
+            error={errors.companyName}
+            required
+          />
           <Input
             label="Full Name"
             value={form.fullName}

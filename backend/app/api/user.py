@@ -1,3 +1,6 @@
+from http.client import HTTPException
+from fastapi import APIRouter, Depends
+
 from fastapi import APIRouter, Depends
 from sqlalchemy.orm import Session
 
@@ -43,6 +46,32 @@ def create_user(
         "data": created_user
     }
 
+@router.get("/")
+def get_all_users(
+    db: Session = Depends(get_db),
+    current_admin: User = Depends(get_current_admin),
+    current_user: User = Depends(get_current_user)
+):
+    users = (
+        db.query(User)
+        .filter(User.is_active == True)
+        .all()
+    )
+
+    return {
+        "message": "Users fetched successfully",
+        "data": [
+            {
+                "id": user.id,
+                "full_name": user.full_name,
+                "email": user.email,
+                "mobile_number": user.mobile_number,
+                "role": user.role,
+                "is_active": user.is_active
+            }
+            for user in users
+        ]
+    }
 
 @router.get("/{user_id}")
 def get_user(
@@ -99,8 +128,30 @@ def delete_user(
     db: Session = Depends(get_db),
     current_admin: User = Depends(get_current_admin)
 ):
-    UserService.delete_user(db, user_id)
+    user = db.query(User).filter(User.id == user_id).first()
+
+    if not user:
+        raise HTTPException(
+            status_code=404,
+            detail="User not found"
+        )
+
+    if user.id == current_admin.id:
+        raise HTTPException(
+            status_code=400,
+            detail="You cannot delete your own account"
+        )
+
+    # Soft delete
+    user.is_active = False
+
+    db.commit()
+    db.refresh(user)
 
     return {
-        "message": "User deleted successfully"
+        "message": "User deleted successfully",
+        "data": {
+            "id": user.id,
+            "is_active": user.is_active
+        }
     }

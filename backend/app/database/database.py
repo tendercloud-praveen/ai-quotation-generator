@@ -76,6 +76,7 @@ Base = declarative_base()
 try:
     with engine.connect() as connection:
         print("✅ Database Connected Successfully!")
+        print(f"Database URL: {DATABASE_URL}")
 except Exception as e:
     print("❌ Database Connection Failed!")
     print(e)
@@ -87,3 +88,26 @@ def get_db():
         yield db
     finally:
         db.close()
+
+
+from sqlalchemy import text
+
+try:
+    with engine.connect() as connection:
+        result = connection.execute(
+            text("""
+                SELECT
+                    current_database(),
+                    current_schema(),
+                    current_user,
+                    inet_server_addr(),
+                    inet_server_port()
+            """)
+        )
+
+        print("✅ Database Connected Successfully!")
+        print("DATABASE INFO:", result.fetchone())
+
+except Exception as e:
+    print("❌ Database Connection Failed!")
+    print(e)
