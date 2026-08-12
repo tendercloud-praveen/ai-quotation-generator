@@ -10,6 +10,9 @@ from app.api.forgot_password import router as forgot_password_router
 from app.models.otp import OTP 
 from app.api.inquiry import router as inquiry_router
 from app.middleware.cors import add_cors
+from app.models.quotations import Quotation, QuotationItem
+from app.api.quotation import router as quotation_router
+from app.api.quotation_approval import router as quotation_approval_router
 
 app = FastAPI()
 add_cors(app)
@@ -22,4 +25,6 @@ app.include_router(login_router)
 app.include_router(product_router)
 app.include_router(forgot_password_router)
 app.include_router(inquiry_router)
+app.include_router(quotation_router)
+app.include_router(quotation_approval_router)
 Base.metadata.create_all(bind=engine)
