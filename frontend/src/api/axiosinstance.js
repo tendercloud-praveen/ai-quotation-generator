@@ -28,7 +28,7 @@ axiosInstance.interceptors.response.use(
       error.response?.status === 401 ||
       error.response?.data?.detail === "Invalid or Expired Token"
     ) {
-      // Remove cookies 
+      // Remove cookies
       Cookies.remove("access_token");
       Cookies.remove("refresh_token");
       Cookies.remove("user");

@@ -52,8 +52,8 @@ export const loginUser = async ({ email, password }) => {
 //   return response.data;
 // };
 
-export const createUserApi = async (userData) => {
-  const response = await axiosInstance.post("/users/create", userData);
+// export const createUserApi = async (userData) => {
+//   const response = await axiosInstance.post("/users/create", userData);
 
-  return response.data;
-};
+//   return response.data;
+// };
