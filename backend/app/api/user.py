@@ -53,10 +53,13 @@ def get_all_users(
     current_user: User = Depends(get_current_user)
 ):
     users = (
-        db.query(User)
-        .filter(User.is_active == True)
-        .all()
+    db.query(User)
+    .filter(
+        User.company_id == current_admin.company_id,
+        User.is_active == True
     )
+    .all()
+)
 
     return {
         "message": "Users fetched successfully",
