@@ -218,6 +218,7 @@ const empty = {
   unit: "Nos",
   sellingPrice: "",
   costPrice: "",
+  gstPercentage: "",
   description: "",
 };
 
@@ -378,6 +379,7 @@ export default function ProductsPage() {
         cost_price: Number(form.costPrice),
 
         selling_price: Number(form.sellingPrice),
+        gst_percentage: Number(form.gstPercentage),
 
         description: form.description?.trim() || "",
       };
@@ -766,6 +768,23 @@ export default function ProductsPage() {
           {/* EMPTY COLUMN */}
 
           <div />
+
+          {/* =================================================
+              GST PERCENTAGE
+          ================================================= */}
+          <Input
+            label="GST Percentage (%)"
+            type="number"
+            value={form.gstPercentage}
+            onChange={(e) =>
+              setForm({
+                ...form,
+                gstPercentage: e.target.value,
+              })
+            }
+            placeholder="18"
+            required
+          />
 
           {/* =================================================
               COST PRICE
