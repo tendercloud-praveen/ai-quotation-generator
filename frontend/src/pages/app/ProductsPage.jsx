@@ -1,179 +1,5 @@
-// import { useMemo, useState } from 'react';
-// import { Package, Plus, Pencil, Trash2, Eye } from 'lucide-react';
-// import PageHeader from '../../components/PageHeader';
-// import Breadcrumbs from '../../components/Breadcrumbs';
-// import { Card } from '../../components/Card';
-// import Button from '../../components/Button';
-// import Modal from '../../components/Modal';
-// import { Input, Select, Textarea } from '../../components/Field';
-// import Badge from '../../components/Badge';
-// import DataTable from '../../components/DataTable';
-// import SearchBar from '../../components/SearchBar';
-// import EmptyState from '../../components/EmptyState';
-// import { ConfirmDialog } from '../../components/ConfirmDialog';
-// import { useToast } from '../../components/Toast';
-// import { useStore } from '../../lib/useStore';
-// import { getProducts, addProduct, updateProduct, deleteProduct, CATEGORIES, UNITS } from '../../lib/data';
-// import { formatINR } from '../../lib/validate';
-// import { useRole } from '../../lib/RoleContext';
-
-// const empty = { sku: '', name: '', category: 'Pumps', unit: 'Nos', sellingPrice: '', costPrice: '', description: '' };
-
-// export default function ProductsPage() {
-//   useStore(() => {});
-//   const toast = useToast();
-//   const { effectiveRole } = useRole();
-//   const canManage = effectiveRole === 'admin';
-//   const [search, setSearch] = useState('');
-//   const [catFilter, setCatFilter] = useState('all');
-//   const [modalOpen, setModalOpen] = useState(false);
-//   const [editing, setEditing] = useState(null);
-//   const [form, setForm] = useState(empty);
-//   const [errors, setErrors] = useState({});
-//   const [deleteId, setDeleteId] = useState(null);
-//   const [viewProduct, setViewProduct] = useState(null);
-
-//   const products = getProducts();
-
-//   const filtered = useMemo(() => {
-//     return products.filter((p) => {
-//       const matches = !search || p.sku.toLowerCase().includes(search.toLowerCase()) || p.name.toLowerCase().includes(search.toLowerCase());
-//       const catOk = catFilter === 'all' || p.category === catFilter;
-//       return matches && catOk;
-//     });
-//   }, [products, search, catFilter]);
-
-//   const openAdd = () => { setEditing(null); setForm(empty); setErrors({}); setModalOpen(true); };
-//   const openEdit = (p) => { setEditing(p); setForm({ ...p }); setErrors({}); setModalOpen(true); };
-
-//   const validate = () => {
-//     const e = {};
-//     if (!form.sku.trim()) e.sku = 'SKU is required';
-//     else if (!editing && products.find((p) => p.sku.toLowerCase() === form.sku.toLowerCase())) e.sku = 'SKU already exists';
-//     if (!form.name.trim()) e.name = 'Product name is required';
-//     if (!form.sellingPrice || isNaN(form.sellingPrice) || +form.sellingPrice <= 0) e.sellingPrice = 'Enter a valid price';
-//     if (!form.costPrice || isNaN(form.costPrice) || +form.costPrice <= 0) e.costPrice = 'Enter a valid cost';
-//     if (+form.costPrice >= +form.sellingPrice) e.sellingPrice = 'Selling price must exceed cost price';
-//     setErrors(e);
-//     return Object.keys(e).length === 0;
-//   };
-
-//   const save = () => {
-//     if (!validate()) return;
-//     const payload = { ...form, sellingPrice: +form.sellingPrice, costPrice: +form.costPrice };
-//     if (editing) { updateProduct(editing.id, payload); toast.success('Product updated.'); }
-//     else { addProduct(payload); toast.success('Product added.'); }
-//     setModalOpen(false);
-//   };
-
-//   const remove = () => { deleteProduct(deleteId); toast.success('Product deleted.'); setDeleteId(null); };
-
-//   const columns = [
-//     { key: 'sku', header: 'SKU', sortable: true, render: (p) => <span className="font-mono font-medium text-brand-600 dark:text-brand-400">{p.sku}</span> },
-//     { key: 'name', header: 'Product', sortable: true, render: (p) => (
-//       <div>
-//         <p className="font-medium text-slate-700 dark:text-slate-200">{p.name}</p>
-//         <p className="text-xs text-slate-400 truncate max-w-[200px]">{p.description}</p>
-//       </div>
-//     )},
-//     { key: 'category', header: 'Category', sortable: true, render: (p) => <Badge tone="info">{p.category}</Badge> },
-//     { key: 'unit', header: 'Unit', render: (p) => <span className="text-slate-500 dark:text-slate-400">{p.unit}</span> },
-//     { key: 'costPrice', header: 'Cost', sortable: true, render: (p) => <span className="text-slate-600 dark:text-slate-300">{formatINR(p.costPrice)}</span> },
-//     { key: 'sellingPrice', header: 'Selling', sortable: true, render: (p) => <span className="font-semibold text-slate-700 dark:text-slate-200">{formatINR(p.sellingPrice)}</span> },
-//     { key: 'margin', header: 'Margin', render: (p) => {
-//       const m = p.sellingPrice - p.costPrice;
-//       const pct = ((m / p.sellingPrice) * 100).toFixed(0);
-//       return <Badge tone={+pct >= 30 ? 'success' : +pct >= 15 ? 'warning' : 'danger'}>{formatINR(m)} ({pct}%)</Badge>;
-//     }},
-//   ];
-
-//   return (
-//     <div className="space-y-6">
-//       <Breadcrumbs items={[{ label: 'Products' }]} />
-//       <PageHeader title="Products" subtitle="Manage your product catalog with pricing and margins." actions={canManage ? <Button onClick={openAdd}><Plus size={16} /> Add Product</Button> : undefined} />
-
-//       <div className="flex flex-col sm:flex-row gap-3 sm:items-center sm:justify-between">
-//         <SearchBar value={search} onChange={setSearch} placeholder="Search by SKU or name…" />
-//         <div className="flex items-center gap-2 overflow-x-auto no-scrollbar pb-1">
-//           <button onClick={() => setCatFilter('all')} className={`px-3 py-1.5 rounded-lg text-sm font-medium whitespace-nowrap transition ${catFilter === 'all' ? 'bg-brand-600 text-white' : 'bg-white dark:bg-slate-800 text-slate-600 dark:text-slate-300 border border-slate-200 dark:border-slate-700'}`}>All</button>
-//           {CATEGORIES.map((c) => (
-//             <button key={c} onClick={() => setCatFilter(c)} className={`px-3 py-1.5 rounded-lg text-sm font-medium whitespace-nowrap transition ${catFilter === c ? 'bg-brand-600 text-white' : 'bg-white dark:bg-slate-800 text-slate-600 dark:text-slate-300 border border-slate-200 dark:border-slate-700'}`}>{c}</button>
-//           ))}
-//         </div>
-//       </div>
-
-//       <Card>
-//         {filtered.length === 0 ? (
-//           <EmptyState icon={Package} title="No products found" description={canManage ? 'Add your first product to start generating quotations.' : 'No products in the catalog yet.'} action={canManage ? <Button onClick={openAdd}><Plus size={16} /> Add Product</Button> : undefined} />
-//         ) : (
-//           <DataTable columns={columns} rows={filtered} pageSize={8} actions={(p) => (
-//             <div className="flex items-center justify-end gap-1">
-//               {!canManage && (
-//                 <button onClick={() => setViewProduct(p)} className="p-1.5 rounded-lg text-slate-400 hover:bg-brand-50 hover:text-brand-600 dark:hover:bg-brand-950/40 transition" title="View"><Eye size={16} /></button>
-//               )}
-//               {canManage && (
-//                 <>
-//                   <button onClick={() => openEdit(p)} className="p-1.5 rounded-lg text-slate-400 hover:bg-brand-50 hover:text-brand-600 dark:hover:bg-brand-950/40 transition" title="Edit"><Pencil size={16} /></button>
-//                   <button onClick={() => setDeleteId(p.id)} className="p-1.5 rounded-lg text-slate-400 hover:bg-red-50 hover:text-red-600 dark:hover:bg-red-950/40 transition" title="Delete"><Trash2 size={16} /></button>
-//                 </>
-//               )}
-//             </div>
-//           )} />
-//         )}
-//       </Card>
-
-//       <Modal open={modalOpen} onClose={() => setModalOpen(false)} title={editing ? 'Edit Product' : 'Add Product'} size="lg" footer={<><Button variant="secondary" onClick={() => setModalOpen(false)}>Cancel</Button><Button onClick={save}>{editing ? 'Save' : 'Add'}</Button></>}>
-//         <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-//           <Input label="SKU" value={form.sku} onChange={(e) => setForm({ ...form, sku: e.target.value })} error={errors.sku} placeholder="CMP-150" required />
-//           <Select label="Category" value={form.category} onChange={(e) => setForm({ ...form, category: e.target.value })}>
-//             {CATEGORIES.map((c) => <option key={c} value={c}>{c}</option>)}
-//           </Select>
-//           <div className="sm:col-span-2">
-//             <Input label="Product Name" value={form.name} onChange={(e) => setForm({ ...form, name: e.target.value })} error={errors.name} placeholder="Centrifugal Monoblock Pump 1.5HP" required />
-//           </div>
-//           <Select label="Unit" value={form.unit} onChange={(e) => setForm({ ...form, unit: e.target.value })}>
-//             {UNITS.map((u) => <option key={u} value={u}>{u}</option>)}
-//           </Select>
-//           <div />
-//           <Input label="Cost Price (₹)" type="number" value={form.costPrice} onChange={(e) => setForm({ ...form, costPrice: e.target.value })} error={errors.costPrice} required />
-//           <Input label="Selling Price (₹)" type="number" value={form.sellingPrice} onChange={(e) => setForm({ ...form, sellingPrice: e.target.value })} error={errors.sellingPrice} required />
-//           <div className="sm:col-span-2">
-//             <Textarea label="Description" value={form.description} onChange={(e) => setForm({ ...form, description: e.target.value })} rows={3} />
-//           </div>
-//         </div>
-//       </Modal>
-
-//       <ConfirmDialog open={!!deleteId} onClose={() => setDeleteId(null)} onConfirm={remove} title="Delete product?" message="This product will be removed from the catalog." confirmLabel="Delete" />
-
-//       {/* View-only modal for non-admins */}
-//       <Modal open={!!viewProduct} onClose={() => setViewProduct(null)} title="Product Details" size="md" footer={<Button variant="secondary" onClick={() => setViewProduct(null)}>Close</Button>}>
-//         {viewProduct && (
-//           <div className="space-y-4">
-//             <div className="flex items-center gap-3">
-//               <div className="grid place-items-center h-12 w-12 rounded-xl bg-brand-50 dark:bg-brand-950/50 text-brand-600 dark:text-brand-400"><Package size={22} /></div>
-//               <div>
-//                 <p className="font-semibold text-slate-800 dark:text-slate-100">{viewProduct.name}</p>
-//                 <p className="text-xs font-mono text-brand-600 dark:text-brand-400">{viewProduct.sku}</p>
-//               </div>
-//             </div>
-//             <div className="grid grid-cols-2 gap-4">
-//               <div><p className="text-xs text-slate-400">Category</p><Badge tone="info">{viewProduct.category}</Badge></div>
-//               <div><p className="text-xs text-slate-400">Unit</p><p className="text-sm font-medium text-slate-700 dark:text-slate-200">{viewProduct.unit}</p></div>
-//               <div><p className="text-xs text-slate-400">Cost Price</p><p className="text-sm font-medium text-slate-700 dark:text-slate-200">{formatINR(viewProduct.costPrice)}</p></div>
-//               <div><p className="text-xs text-slate-400">Selling Price</p><p className="text-sm font-semibold text-slate-700 dark:text-slate-200">{formatINR(viewProduct.sellingPrice)}</p></div>
-//               <div className="col-span-2"><p className="text-xs text-slate-400">Margin</p><Badge tone="success">{formatINR(viewProduct.sellingPrice - viewProduct.costPrice)} ({(((viewProduct.sellingPrice - viewProduct.costPrice) / viewProduct.sellingPrice) * 100).toFixed(0)}%)</Badge></div>
-//               {viewProduct.description && <div className="col-span-2"><p className="text-xs text-slate-400">Description</p><p className="text-sm text-slate-600 dark:text-slate-300">{viewProduct.description}</p></div>}
-//             </div>
-//           </div>
-//         )}
-//       </Modal>
-//     </div>
-//   );
-// }
-
-import { useMemo, useState } from "react";
-import { Package, Plus } from "lucide-react";
-
+import { useEffect, useMemo, useState } from "react";
+import { Package, Plus, Pencil } from "lucide-react";
 import PageHeader from "../../components/PageHeader";
 import Breadcrumbs from "../../components/Breadcrumbs";
 import { Card } from "../../components/Card";
@@ -187,7 +13,12 @@ import { useToast } from "../../components/Toast";
 import { formatINR } from "../../lib/validate";
 import { useRole } from "../../lib/RoleContext";
 
-import { createProductApi } from "../../services/userService";
+import {
+  updateProductApi,
+  createProductApi,
+  getProductsApi,
+  getProductApi,
+} from "../../services/productService";
 
 import SearchBar from "../../components/SearchBar";
 
@@ -237,12 +68,6 @@ export default function ProductsPage() {
      STATE
   ======================================================= */
 
-  // Products currently displayed in the UI.
-  //
-  // NOTE:
-  // There is intentionally NO GET API yet.
-  // Therefore this array is only updated when a product
-  // is successfully created during this page session.
   const [products, setProducts] = useState([]);
 
   const [search, setSearch] = useState("");
@@ -251,9 +76,98 @@ export default function ProductsPage() {
 
   const [modalOpen, setModalOpen] = useState(false);
 
+  const [editingProduct, setEditingProduct] = useState(null);
+
   const [form, setForm] = useState(empty);
 
   const [errors, setErrors] = useState({});
+
+  /* =======================================================
+     GET ALL PRODUCTS
+     
+     GET /products/
+     
+     This loads products directly from the database.
+  ======================================================= */
+
+  const fetchProducts = async () => {
+    try {
+      console.log("Fetching all products...");
+
+      const response = await getProductsApi();
+
+      console.log("GET /products/ response:", response);
+
+      const data = response?.data ?? response;
+
+      /*
+        Backend may return:
+
+        [
+          {...},
+          {...}
+        ]
+
+        OR
+
+        {
+          products: [...]
+        }
+
+        OR
+
+        {
+          items: [...]
+        }
+      */
+
+      const productList = Array.isArray(data)
+        ? data
+        : data?.products || data?.items || [];
+
+      const formattedProducts = productList.map((product) => ({
+        id: product.id ?? product.product_id,
+
+        sku: product.sku || "",
+
+        name: product.product_name || product.name || "",
+
+        category: product.category || "Pumps",
+
+        unit: product.unit || "Nos",
+
+        costPrice: Number(product.cost_price ?? product.costPrice ?? 0),
+
+        sellingPrice: Number(
+          product.selling_price ?? product.sellingPrice ?? 0,
+        ),
+
+        gstPercentage: Number(
+          product.gst_percentage ?? product.gstPercentage ?? 0,
+        ),
+
+        description: product.description || "",
+      }));
+
+      console.log("Formatted products:", formattedProducts);
+
+      setProducts(formattedProducts);
+    } catch (error) {
+      console.error("Get products error:", error);
+
+      console.error("Backend response:", error.response?.data);
+
+      toast.error(error.response?.data?.detail || "Failed to load products.");
+    }
+  };
+
+  /* =======================================================
+     GET ALL PRODUCTS WHEN PAGE LOADS
+  ======================================================= */
+
+  useEffect(() => {
+    fetchProducts();
+  }, []);
 
   /* =======================================================
      FILTER PRODUCTS
@@ -279,11 +193,82 @@ export default function ProductsPage() {
   ======================================================= */
 
   const openAdd = () => {
+    setEditingProduct(null);
+
     setForm(empty);
 
     setErrors({});
 
     setModalOpen(true);
+  };
+
+  /* =======================================================
+     OPEN EDIT PRODUCT
+
+     GET /products/{product_id}
+  ======================================================= */
+
+  const openEdit = async (product) => {
+    try {
+      const productId = product.id ?? product.product_id;
+
+      console.log("Fetching product:", productId);
+
+      /*
+        GET /products/{product_id}
+      */
+
+      const response = await getProductApi(productId);
+
+      console.log("GET product response:", response);
+
+      const productData = response?.data ?? response;
+
+      console.log("Product data:", productData);
+
+      /*
+        Store the product being edited.
+      */
+
+      setEditingProduct({
+        ...productData,
+
+        /*
+          Make sure id exists even if
+          backend returns product_id.
+        */
+        id: productData.id ?? productData.product_id ?? productId,
+      });
+
+      /*
+        Fill the form with backend data.
+      */
+
+      setForm({
+        sku: productData.sku || "",
+        name: productData.product_name || productData.name || "",
+        category: productData.category || "Pumps",
+        unit: productData.unit || "Nos",
+        sellingPrice:
+          productData.selling_price ?? productData.sellingPrice ?? "",
+        costPrice: productData.cost_price ?? productData.costPrice ?? "",
+        gstPercentage:
+          productData.gst_percentage ?? productData.gstPercentage ?? "",
+        description: productData.description || "",
+      });
+
+      setErrors({});
+
+      setModalOpen(true);
+    } catch (error) {
+      console.error("Get product error:", error);
+
+      console.error("Backend response:", error.response?.data);
+
+      toast.error(
+        error.response?.data?.detail || "Failed to load product details.",
+      );
+    }
   };
 
   /* =======================================================
@@ -293,12 +278,15 @@ export default function ProductsPage() {
   const validate = () => {
     const e = {};
 
-    // SKU
+    /* SKU */
+
     if (!form.sku.trim()) {
       e.sku = "SKU is required";
     } else {
       const duplicateSku = products.some(
-        (p) => p.sku.toLowerCase() === form.sku.trim().toLowerCase(),
+        (p) =>
+          p.id !== editingProduct?.id &&
+          p.sku.toLowerCase() === form.sku.trim().toLowerCase(),
       );
 
       if (duplicateSku) {
@@ -306,12 +294,14 @@ export default function ProductsPage() {
       }
     }
 
-    // Product name
+    /* PRODUCT NAME */
+
     if (!form.name.trim()) {
       e.name = "Product name is required";
     }
 
-    // Selling price
+    /* SELLING PRICE */
+
     if (
       !form.sellingPrice ||
       isNaN(form.sellingPrice) ||
@@ -320,7 +310,8 @@ export default function ProductsPage() {
       e.sellingPrice = "Enter a valid price";
     }
 
-    // Cost price
+    /* COST PRICE */
+
     if (
       !form.costPrice ||
       isNaN(form.costPrice) ||
@@ -329,7 +320,8 @@ export default function ProductsPage() {
       e.costPrice = "Enter a valid cost";
     }
 
-    // Selling price should be greater than cost price
+    /* SELLING PRICE > COST PRICE */
+
     if (
       form.costPrice &&
       form.sellingPrice &&
@@ -344,7 +336,13 @@ export default function ProductsPage() {
   };
 
   /* =======================================================
-     CREATE PRODUCT
+     SAVE PRODUCT
+
+     CREATE:
+       POST /products/
+
+     UPDATE:
+       PUT /products/{product_id}
   ======================================================= */
 
   const save = async () => {
@@ -353,20 +351,6 @@ export default function ProductsPage() {
     }
 
     try {
-      /*
-       * IMPORTANT:
-       *
-       * These field names must match the FastAPI schema:
-       *
-       * sku
-       * category
-       * product_name
-       * unit
-       * cost_price
-       * selling_price
-       * description
-       */
-
       const payload = {
         sku: form.sku.trim(),
 
@@ -379,66 +363,87 @@ export default function ProductsPage() {
         cost_price: Number(form.costPrice),
 
         selling_price: Number(form.sellingPrice),
+
         gst_percentage: Number(form.gstPercentage),
 
         description: form.description?.trim() || "",
       };
 
-      console.log("Creating product:", payload);
+      console.log(
+        editingProduct ? "Updating product:" : "Creating product:",
+        payload,
+      );
 
-      /*
-       * POST /products/
-       */
-      const response = await createProductApi(payload);
+      /* =================================================
+         UPDATE PRODUCT
+         
+         PUT /products/{product_id}
+      ================================================= */
 
-      console.log("Create product response:", response);
+      if (editingProduct) {
+        const productId = editingProduct.id ?? editingProduct.product_id;
 
-      /*
-       * Backend successfully created the product.
-       *
-       * Add it to the current page so the user can
-       * immediately see the newly created product.
-       */
+        console.log("Updating product ID:", productId);
 
-      const createdProduct = response?.data || response;
+        const response = await updateProductApi(productId, payload);
 
-      const productForTable = {
-        id: createdProduct?.id || Date.now(),
+        console.log("PUT product response:", response);
 
-        sku: createdProduct?.sku || payload.sku,
+        /*
+          IMPORTANT:
 
-        name: createdProduct?.product_name || payload.product_name,
+          Don't rely on local state after
+          updating.
 
-        category: createdProduct?.category || payload.category,
+          Get the latest data from DB.
+        */
 
-        unit: createdProduct?.unit || payload.unit,
+        await fetchProducts();
 
-        costPrice: Number(createdProduct?.cost_price ?? payload.cost_price),
+        toast.success("Product updated successfully.");
+      } else {
+        /* =================================================
+         CREATE PRODUCT
+         
+         POST /products/
+      ================================================= */
+        const response = await createProductApi(payload);
 
-        sellingPrice: Number(
-          createdProduct?.selling_price ?? payload.selling_price,
-        ),
+        console.log("POST product response:", response);
 
-        description: createdProduct?.description ?? payload.description,
-      };
+        /*
+          After creating, get the latest
+          product list from the database.
+        */
 
-      setProducts((previous) => [...previous, productForTable]);
+        await fetchProducts();
 
-      toast.success("Product added successfully.");
+        toast.success("Product added successfully.");
+      }
 
-      // Close modal
+      /* =================================================
+         RESET
+      ================================================= */
+
       setModalOpen(false);
 
-      // Reset form
+      setEditingProduct(null);
+
       setForm(empty);
 
       setErrors({});
     } catch (error) {
-      console.error("Create product error:", error);
+      console.error(
+        editingProduct ? "Update product error:" : "Create product error:",
+        error,
+      );
 
       console.error("Backend response:", error.response?.data);
 
-      toast.error(error.response?.data?.detail || "Failed to create product.");
+      toast.error(
+        error.response?.data?.detail ||
+          `Failed to ${editingProduct ? "update" : "create"} product.`,
+      );
     }
   };
 
@@ -557,17 +562,55 @@ export default function ProductsPage() {
         );
       },
     },
+
+    /* =====================================================
+       ACTIONS
+
+       ONLY EDIT BUTTON
+
+       NO DELETE BUTTON
+    ===================================================== */
+
+    {
+      key: "actions",
+
+      header: "Actions",
+
+      render: (p) =>
+        canManage ? (
+          <button
+            type="button"
+            onClick={() => openEdit(p)}
+            className="p-2 text-slate-400 hover:text-brand-600 transition"
+            title="Edit Product"
+          >
+            <Pencil size={19} />
+          </button>
+        ) : null,
+    },
   ];
 
-  /* =======================================================
-     UI
-  ======================================================= */
+  const handleNumberChange =
+    (field, max = null) =>
+    (e) => {
+      const value = e.target.value;
+
+      if (
+        value === "" ||
+        (Number(value) >= 0 && (max === null || Number(value) <= max))
+      ) {
+        setForm((prev) => ({
+          ...prev,
+          [field]: value,
+        }));
+      }
+    };
 
   return (
     <div className="space-y-6">
-      {/* ===================================================
+      {/* =================================================
           BREADCRUMBS
-      =================================================== */}
+      ================================================= */}
 
       <Breadcrumbs
         items={[
@@ -577,9 +620,9 @@ export default function ProductsPage() {
         ]}
       />
 
-      {/* ===================================================
+      {/* =================================================
           PAGE HEADER
-      =================================================== */}
+      ================================================= */}
 
       <PageHeader
         title="Products"
@@ -594,9 +637,9 @@ export default function ProductsPage() {
         }
       />
 
-      {/* ===================================================
+      {/* =================================================
           SEARCH + CATEGORY FILTER
-      =================================================== */}
+      ================================================= */}
 
       <div className="flex flex-col sm:flex-row gap-3 sm:items-center sm:justify-between">
         <SearchBar
@@ -637,9 +680,9 @@ export default function ProductsPage() {
         </div>
       </div>
 
-      {/* ===================================================
+      {/* =================================================
           PRODUCT TABLE
-      =================================================== */}
+      ================================================= */}
 
       <Card>
         {filtered.length === 0 ? (
@@ -665,14 +708,14 @@ export default function ProductsPage() {
         )}
       </Card>
 
-      {/* ===================================================
-          ADD PRODUCT MODAL
-      =================================================== */}
+      {/* =================================================
+          ADD / EDIT PRODUCT MODAL
+      ================================================= */}
 
       <Modal
         open={modalOpen}
         onClose={() => setModalOpen(false)}
-        title="Add Product"
+        title={editingProduct ? "Edit Product" : "Add Product"}
         size="lg"
         footer={
           <>
@@ -680,7 +723,7 @@ export default function ProductsPage() {
               Cancel
             </Button>
 
-            <Button onClick={save}>Add</Button>
+            <Button onClick={save}>{editingProduct ? "Save" : "Add"}</Button>
           </>
         }
       >
@@ -701,6 +744,7 @@ export default function ProductsPage() {
             error={errors.sku}
             placeholder="CMP-150"
             required
+            disabled={!!editingProduct}
           />
 
           {/* =================================================
@@ -765,23 +809,19 @@ export default function ProductsPage() {
             ))}
           </Select>
 
-          {/* EMPTY COLUMN */}
-
-          <div />
+          {/* <div /> */}
 
           {/* =================================================
               GST PERCENTAGE
           ================================================= */}
+
           <Input
             label="GST Percentage (%)"
             type="number"
+            min="0"
+            max="100"
             value={form.gstPercentage}
-            onChange={(e) =>
-              setForm({
-                ...form,
-                gstPercentage: e.target.value,
-              })
-            }
+            onChange={handleNumberChange("gstPercentage", 100)}
             placeholder="18"
             required
           />
@@ -793,13 +833,9 @@ export default function ProductsPage() {
           <Input
             label="Cost Price (₹)"
             type="number"
+            min="0"
             value={form.costPrice}
-            onChange={(e) =>
-              setForm({
-                ...form,
-                costPrice: e.target.value,
-              })
-            }
+            onChange={handleNumberChange("costPrice")}
             error={errors.costPrice}
             required
           />
@@ -811,13 +847,9 @@ export default function ProductsPage() {
           <Input
             label="Selling Price (₹)"
             type="number"
+            min="0"
             value={form.sellingPrice}
-            onChange={(e) =>
-              setForm({
-                ...form,
-                sellingPrice: e.target.value,
-              })
-            }
+            onChange={handleNumberChange("sellingPrice")}
             error={errors.sellingPrice}
             required
           />

@@ -15,6 +15,188 @@ router = APIRouter(
     tags=["Quotations"]
 )
 
+# ============================================================
+# GET ALL QUOTATIONS
+# ============================================================
+
+@router.get("/")
+def get_quotations(
+    db: Session = Depends(get_db),
+    current_user=Depends(get_current_user)
+):
+    quotations = (
+        db.query(Quotation)
+        .filter(
+            Quotation.company_id == current_user.company_id
+        )
+        .order_by(
+            Quotation.created_at.desc()
+        )
+        .all()
+    )
+
+    result = []
+
+    for quotation in quotations:
+
+        # Get quotation items
+        items = (
+            db.query(QuotationItem)
+            .filter(
+                QuotationItem.quotation_id == quotation.id
+            )
+            .all()
+        )
+
+        response_items = []
+
+        total_margin = 0
+
+        for item in items:
+
+            # We need cost price from Product
+            from app.models.product import Product
+
+            product = (
+                db.query(Product)
+                .filter(
+                    Product.id == item.product_id
+                )
+                .first()
+            )
+
+            cost_price = (
+                float(product.cost_price)
+                if product
+                else 0
+            )
+
+            quantity = float(item.quantity)
+            unit_price = float(item.unit_price)
+
+            margin = (
+                unit_price - cost_price
+            ) * quantity
+
+            total_margin += margin
+
+            response_items.append({
+                "quotation_item_id": item.id,
+                "product_id": item.product_id,
+                "product_name": item.product_name,
+                "quantity": item.quantity,
+                "unit": item.unit,
+                "unit_price": unit_price,
+                "cost_price": cost_price,
+                "gst_percentage": float(
+                    item.gst_percentage
+                ),
+                "subtotal": float(
+                    item.subtotal
+                ),
+                "gst_amount": float(
+                    item.gst_amount
+                ),
+                "total_price": float(
+                    item.total_price
+                ),
+                "margin": round(
+                    margin,
+                    2
+                )
+            })
+
+        # Get salesperson
+        salesperson = (
+            db.query(User)
+            .filter(
+                User.id == quotation.user_id
+            )
+            .first()
+        )
+
+        salesperson_name = None
+        salesperson_email = None
+
+        if salesperson:
+            salesperson_name = (
+                getattr(
+                    salesperson,
+                    "full_name",
+                    None
+                )
+                or getattr(
+                    salesperson,
+                    "username",
+                    None
+                )
+                or salesperson.email
+            )
+
+            salesperson_email = salesperson.email
+
+        result.append({
+            "quotation_id": quotation.id,
+
+            "quotation_number":
+                quotation.quotation_number,
+
+            "inquiry_text":
+                quotation.inquiry_text,
+
+            "created_by": {
+                "user_id":
+                    quotation.user_id,
+
+                "name":
+                    salesperson_name,
+
+                "email":
+                    salesperson_email
+            },
+
+            "items":
+                response_items,
+
+            "subtotal":
+                float(quotation.subtotal),
+
+            "total_gst":
+                float(quotation.total_gst),
+
+            "grand_total":
+                float(quotation.grand_total),
+
+            "amount":
+                float(quotation.grand_total),
+
+            "margin":
+                round(
+                    total_margin,
+                    2
+                ),
+
+            "status":
+                quotation.status,
+
+            "manager_id":
+                quotation.manager_id,
+
+            "submitted_at":
+                quotation.submitted_at,
+
+            "created_at":
+                quotation.created_at,
+
+            "updated_at":
+                quotation.updated_at
+        })
+
+    return {
+        "status": "success",
+        "count": len(result),
+        "quotations": result
+    }
 
 # ============================================================
 # 1. SAVE QUOTATION AS DRAFT
