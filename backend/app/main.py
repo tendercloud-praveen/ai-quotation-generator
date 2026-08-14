@@ -16,6 +16,7 @@ from app.api.quotation_approval import router as quotation_approval_router
 from app.api.product_get import router as product_get_router
 from app.api.product_edit_delete import router as product_edit_delete_router
 from app.api.managers import router as managers_router
+from app.api.admin_dashboard import router as admin_dashboard_router
 
 app = FastAPI()
 add_cors(app)
@@ -33,4 +34,5 @@ app.include_router(quotation_approval_router)
 app.include_router(product_get_router)
 app.include_router(product_edit_delete_router)
 app.include_router(managers_router)
+app.include_router(admin_dashboard_router)
 Base.metadata.create_all(bind=engine)
