@@ -30,8 +30,3 @@ export const deleteUserApi = async (userId) => {
   return response.data;
 };
 
-// Create product
-export const createProductApi = async (productData) => {
-  const response = await axiosInstance.post("/products/", productData);
-  return response.data;
-};
