@@ -7,6 +7,9 @@ from app.utils.auth import get_current_user
 from app.services.sales_dashboard_service import (
     get_sales_pending_quotations_count,
     get_sales_approved_quotations_count,
+    get_sales_draft_quotations_count,
+    get_sales_rejected_quotations_count,
+    get_sales_dispatched_quotations_count
 )
 
 
@@ -36,10 +39,29 @@ def get_sales_dashboard(
         company_id,
         sales_user_id
     )
+    draft_count = get_sales_draft_quotations_count(
+        db,
+        company_id,
+        sales_user_id
+    )
+    rejected_count = get_sales_rejected_quotations_count(
+        db,
+        company_id,
+        sales_user_id
+    )
+    dispatched_count = get_sales_dispatched_quotations_count(
+        db,
+        company_id,
+        sales_user_id
+    )
+    
 
     return {
         "sales_user_id": sales_user_id,
         "company_id": company_id,
         "pending_quotations": pending_count,
-        "approved_quotations": approved_count
+        "approved_quotations": approved_count,
+        "draft_quotations": draft_count,
+        "rejected_quotations": rejected_count,
+        "dispatched_quotations": dispatched_count
     }
