@@ -21,6 +21,7 @@ from app.api.manager_dashboard import router as manager_dashboard_router
 from app.api.sales_dashboard import router as sales_dashboard_router
 from app.api.admin_quotation_status import router as admin_quotation_status_router
 from app.api.manager_quotation_status import router as manager_quotation_status_router
+from app.api.company import router as company_router
 
 app = FastAPI()
 add_cors(app)
@@ -43,4 +44,5 @@ app.include_router(admin_dashboard_router)
 app.include_router(manager_dashboard_router)
 app.include_router(admin_quotation_status_router)
 app.include_router(manager_quotation_status_router)
+app.include_router(company_router)
 Base.metadata.create_all(bind=engine)
