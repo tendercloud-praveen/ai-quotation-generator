@@ -3,6 +3,7 @@ from app.models.quotations import Quotation
 from app.models.product import Product
 from app.models.user import User
 from sqlalchemy import func
+from app.models.quotations import QuotationItem
 
 
 def get_total_quotations(db: Session, company_id: int):
@@ -90,4 +91,33 @@ def get_total_draft_quotations(db: Session, company_id: int):
             Quotation.status == "DRAFT"
         )
         .count()
+    )
+
+def get_total_margin(db: Session, company_id: int):
+
+    return (
+        db.query(
+            func.coalesce(
+                func.sum(
+                    (
+                        Product.selling_price
+                        - Product.cost_price
+                    ) * QuotationItem.quantity
+                ),
+                0
+            )
+        )
+        .join(
+            Quotation,
+            Quotation.id == QuotationItem.quotation_id
+        )
+        .join(
+            Product,
+            Product.id == QuotationItem.product_id
+        )
+        .filter(
+            Quotation.company_id == company_id,
+            Quotation.status == "APPROVED"
+        )
+        .scalar()
     )

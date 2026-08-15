@@ -9,7 +9,8 @@ from app.services.manager_dashboard_service import (
     get_manager_approved_quotations_count,
     get_manager_rejected_quotations_count,
     get_manager_total_revenue_count,
-    get_manager_draft_quotations_count
+    get_manager_draft_quotations_count,
+    get_manager_total_margin_count
 )
 
 
@@ -66,6 +67,11 @@ def get_manager_dashboard(
         company_id,
         manager_id
     )
+    margin_count = get_manager_total_margin_count(
+        db,
+        company_id,
+        manager_id
+    )
 
     # =====================================================
     # TOTAL REVENUE
@@ -76,11 +82,6 @@ def get_manager_dashboard(
         company_id,
         manager_id
     )
-    draft_count = get_manager_draft_quotations_count(
-    db,
-    company_id,
-    manager_id
-)
 
     # =====================================================
     # RESPONSE
@@ -92,5 +93,6 @@ def get_manager_dashboard(
         "pending_quotations": pending_count,
         "approved_quotations": approved_count,
         "rejected_quotations": rejected_count,
-        "total_revenue": total_revenue
+        "total_revenue": total_revenue,
+        "total_margin": margin_count
     }

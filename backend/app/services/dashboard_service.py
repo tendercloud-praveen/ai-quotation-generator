@@ -1,5 +1,5 @@
 from sqlalchemy.orm import Session
-from app.repositories.quotation_repository import get_total_quotations, get_pending_quotations,get_approved_quotations,get_rejected_quotations, get_dispatched_quotations,get_total_revenue, get_company_products,get_total_team_members, get_total_draft_quotations
+from app.repositories.quotation_repository import get_total_quotations, get_pending_quotations,get_approved_quotations,get_rejected_quotations, get_dispatched_quotations,get_total_revenue, get_company_products,get_total_team_members, get_total_draft_quotations,get_total_margin
 
 
 def get_total_quotations_count(db: Session, company_id: int):
@@ -67,3 +67,15 @@ def get_total_draft_quotations_count(db: Session, company_id: int):
     
 
     return total_draft_quotations
+def get_total_margin_count(db: Session, company_id: int):
+
+    total_margin = get_total_margin(
+        db,
+        company_id
+    )
+
+    print(
+        f"Company {company_id} Total Margin: {total_margin}"
+    )
+
+    return total_margin
