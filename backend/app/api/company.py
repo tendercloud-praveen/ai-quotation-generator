@@ -9,32 +9,32 @@ from app.utils.auth import get_current_user
 
 
 router = APIRouter(
-    prefix="/companies",
-    tags=["Companies"]
+    prefix="/customers",
+    tags=["Customers"]
 )
 
 @router.post("/")
-def create_company(
-    company_data: CompanyCreate,
+def create_customer(
+    customer_data: CompanyCreate,
     db: Session = Depends(get_db),
     current_user=Depends(get_current_user)
 ):
     existing_company = db.query(Company).filter(
-        Company.company_name == company_data.company_name
+        Company.company_name == customer_data.company_name
     ).first()
 
     if existing_company:
         raise HTTPException(
             status_code=400,
-            detail="Company already exists"
+            detail="Customer already exists"
         )
 
     new_company = Company(
-        company_name=company_data.company_name,
-        contact_person=company_data.contact_person,
-        email=company_data.email,
-        mobile=company_data.mobile,
-        address=company_data.address
+        company_name=customer_data.company_name,
+        contact_person=customer_data.contact_person,
+        email=customer_data.email,
+        mobile=customer_data.mobile,
+        address=customer_data.address
     )
 
     db.add(new_company)
@@ -43,8 +43,8 @@ def create_company(
 
     return {
         "status": "success",
-        "message": "Company added successfully",
-        "company": {
+        "message": "Customer added successfully",
+        "customer": {
             "id": new_company.id,
             "company_name": new_company.company_name,
             "contact_person": new_company.contact_person,
@@ -88,14 +88,14 @@ def get_all_customers(
 
 
 
-@router.get("/{company_id}")
+@router.get("/{customer_id}")
 def get_customer(
-    company_id: int,
+    customer_id: int,
     db: Session = Depends(get_db),
     current_user=Depends(get_current_user)
 ):
     company = db.query(Company).filter(
-        Company.id == company_id
+        Company.id == customer_id
     ).first()
 
     if not company:
@@ -118,20 +118,14 @@ def get_customer(
     }
 
 
-
-
-
-
-
-
-@router.delete("/{company_id}")
+@router.delete("/{customer_id}")
 def delete_customer(
-    company_id: int,
+    customer_id: int,
     db: Session = Depends(get_db),
     current_user=Depends(get_current_user)
 ):
     company = db.query(Company).filter(
-        Company.id == company_id
+        Company.id == customer_id
     ).first()
 
     if not company:
@@ -147,38 +141,39 @@ def delete_customer(
         "status": "success",
         "message": "Customer deleted successfully",
         "data": {
-            "id": company_id
-        }
+            "id": customer_id
+
+            
+       }
+
     }
 
 
 
 
 
-
-
-@router.put("/{company_id}")
-def update_company(
-    company_id: int,
-    company_data: CompanyUpdate,
+@router.put("/{customer_id}")
+def update_customer(
+    customer_id: int,
+    customer_data: CompanyUpdate,
     db: Session = Depends(get_db),
     current_user=Depends(get_current_user)
 ):
     company = db.query(Company).filter(
-        Company.id == company_id
+        Company.id == customer_id
     ).first()
 
     if not company:
         raise HTTPException(
             status_code=404,
-            detail="Company not found"
+            detail="Customer not found"
         )
 
-    company.company_name = company_data.company_name
-    company.contact_person = company_data.contact_person
-    company.email = company_data.email
-    company.mobile = company_data.mobile
-    company.address = company_data.address
+    company.company_name = customer_data.company_name
+    company.contact_person = customer_data.contact_person
+    company.email = customer_data.email
+    company.mobile = customer_data.mobile
+    company.address = customer_data.address
 
     db.commit()
     db.refresh(company)
