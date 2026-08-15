@@ -8,7 +8,8 @@ from app.services.manager_dashboard_service import (
     get_manager_pending_quotations_count,
     get_manager_approved_quotations_count,
     get_manager_rejected_quotations_count,
-    get_manager_total_revenue_count
+    get_manager_total_revenue_count,
+    get_manager_draft_quotations_count
 )
 
 
@@ -75,6 +76,11 @@ def get_manager_dashboard(
         company_id,
         manager_id
     )
+    draft_count = get_manager_draft_quotations_count(
+    db,
+    company_id,
+    manager_id
+)
 
     # =====================================================
     # RESPONSE

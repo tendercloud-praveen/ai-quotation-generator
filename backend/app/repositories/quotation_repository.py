@@ -82,3 +82,12 @@ def get_total_team_members(db: Session, company_id: int):
         )
         .count()
     )
+def get_total_draft_quotations(db: Session, company_id: int):
+    return (
+        db.query(Quotation)
+        .filter(
+            Quotation.company_id == company_id,
+            Quotation.status == "DRAFT"
+        )
+        .count()
+    )

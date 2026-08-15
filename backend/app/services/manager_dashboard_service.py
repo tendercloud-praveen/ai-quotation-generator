@@ -4,7 +4,8 @@ from app.repositories.manager_dashboard_repository import (
     get_manager_pending_quotations,
     get_manager_approved_quotations,
     get_manager_rejected_quotations,
-    get_manager_total_revenue
+    get_manager_total_revenue,
+    get_manager_draft_quotations
 )
 
 
@@ -102,3 +103,21 @@ def get_manager_total_revenue_count(
     )
 
     return total_revenue
+def get_manager_draft_quotations_count(
+    db: Session,
+    company_id: int,
+    manager_id: int
+):
+    draft_count = get_manager_draft_quotations(
+        db,
+        company_id,
+        manager_id
+    )
+
+    print(
+        f"Company {company_id} | "
+        f"Manager {manager_id} | "
+        f"Draft Quotations: {draft_count}"
+    )
+
+    return draft_count
