@@ -67,3 +67,17 @@ def get_manager_rejected_quotations(
         )
         .count()
     )
+def get_manager_draft_quotations(
+    db: Session,
+    company_id: int,
+    manager_id: int
+):
+    return (
+        db.query(Quotation)
+        .filter(
+            Quotation.company_id == company_id,
+            Quotation.manager_id == manager_id,
+            Quotation.status == "DRAFT"
+        )
+        .count()
+    )

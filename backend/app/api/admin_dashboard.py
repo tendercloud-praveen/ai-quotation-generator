@@ -2,7 +2,7 @@ from fastapi import APIRouter, Depends
 from sqlalchemy.orm import Session
 
 from app.database.database import get_db
-from app.services.dashboard_service import get_total_quotations_count, get_pending_quotations_count, get_approved_quotations_count,get_dispatched_quotations_count, get_total_revenue_count, get_company_products_count, get_total_team_members_count
+from app.services.dashboard_service import get_total_quotations_count, get_pending_quotations_count, get_approved_quotations_count,get_dispatched_quotations_count, get_total_revenue_count, get_company_products_count, get_total_team_members_count, get_total_draft_quotations_count
 from app.utils.auth import get_current_user,get_current_admin
 
 
@@ -49,6 +49,10 @@ def get_quotations_count(
         db,     
         company_id
     )
+    total_draft_quotations = get_total_draft_quotations_count(
+        db, 
+        company_id
+    )
     return {
         "company_id": company_id,
         "total_quotations": total_quotations,
@@ -57,5 +61,6 @@ def get_quotations_count(
         "dispatched_quotations": dispatched_count,
         "total_revenue": total_revenue,
         "product_count": product_count,
-        "total_team_members": total_team_members
+        "total_team_members": total_team_members,
+        "total_draft_quotations": total_draft_quotations
     }

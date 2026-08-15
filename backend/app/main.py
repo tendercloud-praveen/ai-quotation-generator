@@ -18,6 +18,7 @@ from app.api.product_edit_delete import router as product_edit_delete_router
 from app.api.managers import router as managers_router
 from app.api.admin_dashboard import router as admin_dashboard_router
 from app.api.manager_dashboard import router as manager_dashboard_router
+from app.api.sales_dashboard import router as sales_dashboard_router
 
 app = FastAPI()
 add_cors(app)
@@ -27,6 +28,7 @@ def read_root():
     return {"Hello": "World"}
 app.include_router(user_router)
 app.include_router(login_router)
+app.include_router(sales_dashboard_router)
 app.include_router(product_router)
 app.include_router(forgot_password_router)
 app.include_router(inquiry_router)

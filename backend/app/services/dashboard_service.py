@@ -1,5 +1,5 @@
 from sqlalchemy.orm import Session
-from app.repositories.quotation_repository import get_total_quotations, get_pending_quotations,get_approved_quotations,get_rejected_quotations, get_dispatched_quotations,get_total_revenue, get_company_products,get_total_team_members
+from app.repositories.quotation_repository import get_total_quotations, get_pending_quotations,get_approved_quotations,get_rejected_quotations, get_dispatched_quotations,get_total_revenue, get_company_products,get_total_team_members, get_total_draft_quotations
 
 
 def get_total_quotations_count(db: Session, company_id: int):
@@ -60,3 +60,10 @@ def get_total_team_members_count(db: Session, company_id: int):
     print(f"Company {company_id} Total Team Members: {total_team_members}")
 
     return total_team_members
+def get_total_draft_quotations_count(db: Session, company_id: int):
+
+    total_draft_quotations = get_total_draft_quotations(db, company_id)
+
+    
+
+    return total_draft_quotations
