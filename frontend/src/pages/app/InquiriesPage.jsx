@@ -1487,7 +1487,7 @@ export default function InquiriesPage() {
                     Sample {i + 1}
                   </button>
                 ))}
-              </div>
+              </div> */}
             </div>
 
             <Textarea

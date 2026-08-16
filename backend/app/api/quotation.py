@@ -18,7 +18,6 @@ router = APIRouter(
 # ============================================================
 # GET ALL QUOTATIONS
 # ============================================================
-
 @router.get("/")
 def get_quotations(
     db: Session = Depends(get_db),

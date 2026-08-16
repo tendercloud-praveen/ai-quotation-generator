@@ -12,7 +12,7 @@ DB_USER = os.getenv("DB_USER")
 DB_PASSWORD = os.getenv("DB_PASSWORD")
 
 DATABASE_URL = (
-    f"postgresql://{DB_USER}:{DB_PASSWORD}@{DB_HOST}:{DB_PORT}/{DB_NAME}"
+    f"postgresql://postgres:Bhargava%40123@localhost:5432/ai_quotation_db"
 )
 print("DATABASE_URL:", DATABASE_URL)
 

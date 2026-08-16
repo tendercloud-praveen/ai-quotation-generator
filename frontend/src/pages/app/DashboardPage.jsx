@@ -1,4 +1,4 @@
-import { useMemo } from "react";
+import { useMemo, useEffect, useState } from "react";
 import { Link } from "react-router-dom";
 import {
   BarChart,
@@ -42,6 +42,11 @@ import {
   getCustomers,
   getInquiries,
 } from "../../lib/data";
+import {
+  getManagerDashboardApi,
+  getAdminDashboardApi,
+  getSalesDashboardApi,
+} from "../../services/dashboardService";
 import { getUsers } from "../../lib/users";
 import { formatINR, formatDate } from "../../lib/validate";
 import { ROLE_LABELS } from "../../lib/nav";
@@ -52,14 +57,36 @@ export default function DashboardPage() {
   useStore(() => {});
 
   const { user, effectiveRole } = useRole();
+  const [dashboardData, setDashboardData] = useState(null);
+  const [dashboardLoading, setDashboardLoading] = useState(false);
 
-  // if (!user) {
-  //   return (
-  //     <div className="flex min-h-[400px] items-center justify-center">
-  //       <div className="text-sm text-slate-500">Loading dashboard...</div>
-  //     </div>
-  //   );
-  // }
+  useEffect(() => {
+    const loadDashboard = async () => {
+      try {
+        setDashboardLoading(true);
+
+        let response;
+
+        if (effectiveRole === "admin") {
+          response = await getAdminDashboardApi();
+        } else if (effectiveRole === "manager") {
+          response = await getManagerDashboardApi();
+        } else if (effectiveRole === "sales_rep") {
+          response = await getSalesDashboardApi();
+        }
+
+        setDashboardData(response);
+      } catch (error) {
+        console.error("Failed to load dashboard:", error);
+      } finally {
+        setDashboardLoading(false);
+      }
+    };
+
+    if (effectiveRole) {
+      loadDashboard();
+    }
+  }, [effectiveRole]);
 
   const quotations = getQuotations();
   const products = getProducts();
@@ -68,51 +95,78 @@ export default function DashboardPage() {
   const users = getUsers();
 
   const stats = useMemo(() => {
-    // For sales rep, only count their own quotations
-    const myQuotations =
-      effectiveRole === "sales_rep"
-        ? quotations.filter((q) => q.salesRepId === user?.id)
-        : quotations;
+    if (!dashboardData) {
+      return {
+        total: 0,
+        pending: 0,
+        approved: 0,
+        rejected: 0,
+        dispatched: 0,
+        revenue: 0,
+        margin: 0,
+        myInquiries: 0,
+      };
+    }
 
-    const myInquiries =
-      effectiveRole === "sales_rep"
-        ? inquiries.filter((i) => i.salesRepId === user?.id)
-        : inquiries;
+    if (effectiveRole === "admin") {
+      return {
+        total: dashboardData.total_quotations ?? 0,
+        pending: dashboardData.pending_quotations ?? 0,
+        approved: dashboardData.approved_quotations ?? 0,
+        rejected: dashboardData.rejected_quotations ?? 0,
+        dispatched: dashboardData.dispatched_quotations ?? 0,
+        revenue: dashboardData.total_revenue ?? 0,
+        margin: dashboardData.total_margin ?? 0,
+        productCount: dashboardData.product_count ?? 0,
+        teamMembers: dashboardData.total_team_members ?? 0,
+        myInquiries: 0,
+      };
+    }
 
-    const total = myQuotations.length;
+    if (effectiveRole === "manager") {
+      return {
+        total:
+          (dashboardData.pending_quotations ?? 0) +
+          (dashboardData.approved_quotations ?? 0) +
+          (dashboardData.rejected_quotations ?? 0),
 
-    const pending = myQuotations.filter(
-      (q) => q.status === "pending_approval",
-    ).length;
+        pending: dashboardData.pending_quotations ?? 0,
+        approved: dashboardData.approved_quotations ?? 0,
+        rejected: dashboardData.rejected_quotations ?? 0,
+        dispatched: 0,
+        revenue: dashboardData.total_revenue ?? 0,
+        margin: dashboardData.total_margin ?? 0,
+        myInquiries: 0,
+      };
+    }
 
-    const approved = myQuotations.filter((q) => q.status === "approved").length;
+    if (effectiveRole === "sales_rep") {
+      return {
+        total:
+          (dashboardData.pending_quotations ?? 0) +
+          (dashboardData.approved_quotations ?? 0),
 
-    const rejected = myQuotations.filter((q) => q.status === "rejected").length;
-
-    const dispatched = myQuotations.filter(
-      (q) => q.status === "dispatched",
-    ).length;
-
-    const revenue = myQuotations
-      .filter((q) => q.status === "dispatched" || q.status === "approved")
-      .reduce((s, q) => s + q.grandTotal, 0);
-
-    const margin = myQuotations.reduce(
-      (s, q) => s + q.lines.reduce((m, l) => m + l.margin, 0),
-      0,
-    );
+        pending: dashboardData.pending_quotations ?? 0,
+        approved: dashboardData.approved_quotations ?? 0,
+        rejected: 0,
+        dispatched: 0,
+        revenue: 0,
+        margin: 0,
+        myInquiries: 0,
+      };
+    }
 
     return {
-      total,
-      pending,
-      approved,
-      rejected,
-      dispatched,
-      revenue,
-      margin,
-      myInquiries: myInquiries.length,
+      total: 0,
+      pending: 0,
+      approved: 0,
+      rejected: 0,
+      dispatched: 0,
+      revenue: 0,
+      margin: 0,
+      myInquiries: 0,
     };
-  }, [quotations, inquiries, effectiveRole, user?.id]);
+  }, [dashboardData, effectiveRole]);
 
   const myQuotations =
     effectiveRole === "sales_rep"
@@ -157,6 +211,15 @@ export default function DashboardPage() {
   const axisColor = isDark ? "#94a3b8" : "#64748b";
   const gridColor = isDark ? "#1e293b" : "#f1f5f9";
 
+  // WAIT FOR ROLE + API
+  if (!effectiveRole || dashboardLoading) {
+    return (
+      <div className="flex min-h-[400px] items-center justify-center">
+        <div className="text-sm text-slate-500">Loading dashboard...</div>
+      </div>
+    );
+  }
+
   return (
     <div className="space-y-6">
       <Breadcrumbs items={[{ label: "Dashboard" }]} />
@@ -184,8 +247,10 @@ export default function DashboardPage() {
       </div>
 
       {/* Stat cards — role-specific */}
+      {/* Stat cards — role-specific */}
       {effectiveRole === "admin" && (
         <div className="grid grid-cols-2 lg:grid-cols-4 gap-4">
+          {/* Row 1 */}
           <StatCard
             label="Total Quotations"
             value={stats.total}
@@ -193,6 +258,7 @@ export default function DashboardPage() {
             tone="brand"
             trend={12}
           />
+
           <StatCard
             label="Pending Approval"
             value={stats.pending}
@@ -200,6 +266,7 @@ export default function DashboardPage() {
             tone="warning"
             trend={-4}
           />
+
           <StatCard
             label="Approved"
             value={stats.approved}
@@ -207,6 +274,7 @@ export default function DashboardPage() {
             tone="success"
             trend={8}
           />
+
           <StatCard
             label="Dispatched"
             value={stats.dispatched}
@@ -214,34 +282,79 @@ export default function DashboardPage() {
             tone="info"
             trend={15}
           />
+
+          {/* Row 2 */}
+          <StatCard
+            label="Products"
+            value={stats.productCount}
+            icon={Package}
+            tone="brand"
+          />
+
+          <StatCard
+            label="Team Members"
+            value={stats.teamMembers}
+            icon={Users}
+            tone="info"
+          />
+
+          <StatCard
+            label="Total Revenue"
+            value={formatINR(stats.revenue)}
+            icon={IndianRupee}
+            tone="success"
+            trend={9}
+          />
+
+          <StatCard
+            label="Total Margin"
+            value={formatINR(stats.margin)}
+            icon={TrendingUp}
+            tone="accent"
+            trend={6}
+          />
         </div>
       )}
 
       {effectiveRole === "manager" && (
         <div className="grid grid-cols-2 lg:grid-cols-4 gap-4">
+          {/* Row 1 */}
           <StatCard
             label="Pending Approvals"
             value={stats.pending}
             icon={Clock}
             tone="warning"
           />
+
           <StatCard
             label="Approved Quotations"
             value={stats.approved}
             icon={CheckCircle2}
             tone="success"
           />
+
           <StatCard
             label="Rejected"
             value={stats.rejected}
             icon={XCircle}
             tone="danger"
           />
+
+          {/* Row 2 */}
+          <StatCard
+            label="Total Revenue"
+            value={formatINR(stats.revenue)}
+            icon={IndianRupee}
+            tone="success"
+            trend={9}
+          />
+
           <StatCard
             label="Total Margin"
             value={formatINR(stats.margin)}
             icon={TrendingUp}
             tone="accent"
+            trend={6}
           />
         </div>
       )}
@@ -254,54 +367,26 @@ export default function DashboardPage() {
             icon={FileText}
             tone="brand"
           />
+
           <StatCard
             label="My Quotations"
             value={stats.total}
             icon={FileCheck2}
             tone="info"
           />
+
           <StatCard
             label="Pending Approval"
             value={stats.pending}
             icon={Clock}
             tone="warning"
           />
+
           <StatCard
             label="Approved"
             value={stats.approved}
             icon={CheckCircle2}
             tone="success"
-          />
-        </div>
-      )}
-
-      {(effectiveRole === "admin" || effectiveRole === "manager") && (
-        <div className="grid grid-cols-2 lg:grid-cols-4 gap-4">
-          <StatCard
-            label="Total Revenue"
-            value={formatINR(stats.revenue)}
-            icon={IndianRupee}
-            tone="success"
-            trend={9}
-          />
-          <StatCard
-            label="Total Margin"
-            value={formatINR(stats.margin)}
-            icon={TrendingUp}
-            tone="accent"
-            trend={6}
-          />
-          <StatCard
-            label="Products"
-            value={products.length}
-            icon={Package}
-            tone="brand"
-          />
-          <StatCard
-            label={effectiveRole === "admin" ? "Team Members" : "Customers"}
-            value={effectiveRole === "admin" ? users.length : customers.length}
-            icon={Users}
-            tone="info"
           />
         </div>
       )}

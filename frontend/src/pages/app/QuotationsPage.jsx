@@ -401,9 +401,12 @@ const STATUS_FLOW = [
 
 export default function QuotationsPage() {
   useStore(() => {});
+
   const navigate = useNavigate();
   const toast = useToast();
+
   const { user, effectiveRole } = useRole();
+
   const [searchParams, setSearchParams] = useSearchParams();
   const [search, setSearch] = useState("");
   const [statusFilter, setStatusFilter] = useState(
@@ -427,13 +430,25 @@ export default function QuotationsPage() {
   const [assignModal, setAssignModal] = useState(null); // { quotation }
   const [assignManagerId, setAssignManagerId] = useState("");
 
-  const managers = getManagers();
+  /*
+   * Manager assignment state
+   */
+  const [assignModal, setAssignModal] = useState(null);
+  const [assignManagerId, setAssignManagerId] = useState("");
+
+  const [managers, setManagers] = useState([]);
+  const [loadingManagers, setLoadingManagers] = useState(false);
+  const [submittingQuotation, setSubmittingQuotation] = useState(false);
+
+  const [quotations, setQuotations] = useState([]);
 
   const [quotations, setQuotations] = useState([]);
   const customers = getCustomers();
   const inquiries = getInquiries();
 
-  // Edit state
+  /*
+   * Edit state
+   */
   const [editLines, setEditLines] = useState([]);
   const [editComment, setEditComment] = useState("");
 
@@ -517,6 +532,63 @@ export default function QuotationsPage() {
     loadQuotations();
   }, []);
 
+        setQuotations(formattedQuotations);
+      } catch (error) {
+        console.error("Failed to load quotations:", error);
+
+        toast.error("Failed to load quotations.");
+      }
+    };
+
+    loadQuotations();
+  }, []);
+
+  /*
+   * ==========================================
+   * GET MANAGERS
+   * ==========================================
+   */
+  useEffect(() => {
+    const loadManagers = async () => {
+      try {
+        setLoadingManagers(true);
+
+        const response = await getManagersApi();
+
+        console.log("Managers API response:", response);
+
+        const apiManagers = response?.managers || [];
+
+        const formattedManagers = apiManagers.map((manager) => ({
+          id: manager.id,
+
+          fullName: manager.full_name,
+
+          email: manager.email,
+
+          mobileNumber: manager.mobile_number,
+
+          role: manager.role,
+        }));
+
+        setManagers(formattedManagers);
+      } catch (error) {
+        console.error("Failed to load managers:", error);
+
+        toast.error("Failed to load managers.");
+      } finally {
+        setLoadingManagers(false);
+      }
+    };
+
+    loadManagers();
+  }, []);
+
+  /*
+   * ==========================================
+   * FILTER QUOTATIONS
+   * ==========================================
+   */
   const filtered = useMemo(() => {
     return quotations.filter((q) => {
       // Sales rep only sees their own quotations; manager only sees quotations assigned to them
@@ -535,6 +607,11 @@ export default function QuotationsPage() {
     });
   }, [quotations, customers, search, statusFilter, effectiveRole, user.id]);
 
+  /*
+   * ==========================================
+   * OPEN SEND FOR APPROVAL MODAL
+   * ==========================================
+   */
   const submitForApproval = (q) => {
     if (managers.length === 0) {
       toast.error(
@@ -594,6 +671,16 @@ export default function QuotationsPage() {
     setDeleteId(null);
   };
 
+    toast.success("Quotation deleted.");
+
+    setDeleteId(null);
+  };
+
+  /*
+   * ==========================================
+   * EDIT
+   * ==========================================
+   */
   const openEdit = (q) => {
     setEditId(q.id);
     setEditLines(q.lines.map((l) => ({ ...l })));
@@ -626,8 +713,14 @@ export default function QuotationsPage() {
   };
 
   const viewQuotation = quotations.find((q) => q.id === viewId);
+
   const editQuotation = quotations.find((q) => q.id === editId);
 
+  /*
+   * ==========================================
+   * TABLE COLUMNS
+   * ==========================================
+   */
   const columns = [
     {
       key: "customer",
@@ -682,6 +775,11 @@ export default function QuotationsPage() {
     },
   ];
 
+  /*
+   * ==========================================
+   * UI
+   * ==========================================
+   */
   return (
     <div className="space-y-6">
       <Breadcrumbs items={[{ label: "Quotations" }]} />
@@ -780,7 +878,11 @@ export default function QuotationsPage() {
             )}
           />
         )}
-      </Card>
+      </Modal>
+
+      {/* =====================================
+          EDIT QUOTATION MODAL
+          ===================================== */}
 
       {/* View Quotation Modal */}
       <Modal
@@ -857,16 +959,22 @@ export default function QuotationsPage() {
           <div className="space-y-4">
             <div className="overflow-x-auto rounded-lg border border-slate-200 dark:border-slate-700">
               <table className="w-full text-sm">
-                <thead className="bg-slate-50 dark:bg-slate-800 text-xs uppercase text-slate-500 dark:text-slate-400">
+                <thead className="bg-slate-50 dark:bg-slate-800 text-xs uppercase text-slate-500">
                   <tr>
                     <th className="px-3 py-2 text-left">Product</th>
+
                     <th className="px-3 py-2 text-right">Qty</th>
+
                     <th className="px-3 py-2 text-right">Cost</th>
+
                     <th className="px-3 py-2 text-right">Selling</th>
+
                     <th className="px-3 py-2 text-right">Margin</th>
+
                     <th className="px-3 py-2 text-right">Total</th>
                   </tr>
                 </thead>
+
                 <tbody>
                   {editLines.map((l, i) => (
                     <tr
@@ -918,6 +1026,7 @@ export default function QuotationsPage() {
                 </tbody>
               </table>
             </div>
+
             <div className="flex justify-end">
               <div className="text-right space-y-1">
                 <p className="text-sm text-slate-500 dark:text-slate-400">
@@ -968,6 +1077,7 @@ export default function QuotationsPage() {
       >
         {assignModal && (
           <div className="space-y-4">
+            {/* QUOTATION AMOUNT */}
             <div className="rounded-lg bg-slate-50 dark:bg-slate-800 p-3">
               <p className="text-xs text-slate-400">Quotation amount</p>
               <p className="text-lg font-bold text-slate-800 dark:text-slate-100">
@@ -1008,9 +1118,17 @@ export default function QuotationsPage() {
   );
 }
 
+/*
+ * ==========================================
+ * QUOTATION DETAIL
+ * ==========================================
+ */
+
 function QuotationDetail({ q, customers, inquiries, user }) {
   const cust = customers.find((c) => c.id === q.customerId);
+
   const inq = inquiries.find((i) => i.id === q.inquiryId);
+
   return (
     <div className="space-y-5">
       <div className="grid grid-cols-2 gap-4">
@@ -1047,16 +1165,20 @@ function QuotationDetail({ q, customers, inquiries, user }) {
         </div>
       )}
 
-      <div className="overflow-x-auto rounded-lg border border-slate-200 dark:border-slate-700">
+      <div className="overflow-x-auto rounded-lg border">
         <table className="w-full text-sm">
-          <thead className="bg-slate-50 dark:bg-slate-800 text-xs uppercase text-slate-500 dark:text-slate-400">
+          <thead className="bg-slate-50 dark:bg-slate-800 text-xs uppercase">
             <tr>
               <th className="px-4 py-2 text-left">Product</th>
+
               <th className="px-4 py-2 text-right">Qty</th>
+
               <th className="px-4 py-2 text-right">Price</th>
+
               <th className="px-4 py-2 text-right">Total</th>
             </tr>
           </thead>
+
           <tbody>
             {q.lines.map((l, i) => (
               <tr

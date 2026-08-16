@@ -82,6 +82,97 @@ export default function ProductsPage() {
 
   const [errors, setErrors] = useState({});
 
+  const [viewModalOpen, setViewModalOpen] = useState(false);
+  const [viewingProduct, setViewingProduct] = useState(null);
+  const [viewLoading, setViewLoading] = useState(false);
+
+  /* =======================================================
+     GET ALL PRODUCTS
+     
+     GET /products/
+     
+     This loads products directly from the database.
+  ======================================================= */
+
+  const fetchProducts = async () => {
+    try {
+      console.log("Fetching all products...");
+
+      const response = await getProductsApi();
+
+      console.log("GET /products/ response:", response);
+
+      const data = response?.data ?? response;
+
+      /*
+        Backend may return:
+
+        [
+          {...},
+          {...}
+        ]
+
+        OR
+
+        {
+          products: [...]
+        }
+
+        OR
+
+        {
+          items: [...]
+        }
+      */
+
+      const productList = Array.isArray(data)
+        ? data
+        : data?.products || data?.items || [];
+
+      const formattedProducts = productList.map((product) => ({
+        id: product.id ?? product.product_id,
+
+        sku: product.sku || "",
+
+        name: product.product_name || product.name || "",
+
+        category: product.category || "Pumps",
+
+        unit: product.unit || "Nos",
+
+        costPrice: Number(product.cost_price ?? product.costPrice ?? 0),
+
+        sellingPrice: Number(
+          product.selling_price ?? product.sellingPrice ?? 0,
+        ),
+
+        gstPercentage: Number(
+          product.gst_percentage ?? product.gstPercentage ?? 0,
+        ),
+
+        description: product.description || "",
+      }));
+
+      console.log("Formatted products:", formattedProducts);
+
+      setProducts(formattedProducts);
+    } catch (error) {
+      console.error("Get products error:", error);
+
+      console.error("Backend response:", error.response?.data);
+
+      toast.error(error.response?.data?.detail || "Failed to load products.");
+    }
+  };
+
+  /* =======================================================
+     GET ALL PRODUCTS WHEN PAGE LOADS
+  ======================================================= */
+
+  useEffect(() => {
+    fetchProducts();
+  }, []);
+
   /* =======================================================
      GET ALL PRODUCTS
      
@@ -872,6 +963,128 @@ export default function ProductsPage() {
             />
           </div>
         </div>
+      </Modal>
+      <Modal
+        open={viewModalOpen}
+        onClose={() => {
+          setViewModalOpen(false);
+          setViewingProduct(null);
+        }}
+        title="Product Details"
+        size="lg"
+      >
+        {viewLoading ? (
+          <div className="py-10 text-center text-slate-500">
+            Loading product details...
+          </div>
+        ) : viewingProduct ? (
+          <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+            <div>
+              <p className="text-xs text-slate-500 mb-1">SKU</p>
+              <p className="font-medium text-slate-800 dark:text-slate-100">
+                {viewingProduct.sku || "—"}
+              </p>
+            </div>
+
+            <div>
+              <p className="text-xs text-slate-500 mb-1">Category</p>
+              <p className="font-medium text-slate-800 dark:text-slate-100">
+                {viewingProduct.category || "—"}
+              </p>
+            </div>
+
+            <div className="sm:col-span-2">
+              <p className="text-xs text-slate-500 mb-1">Product Name</p>
+              <p className="font-medium text-slate-800 dark:text-slate-100">
+                {viewingProduct.product_name || viewingProduct.name || "—"}
+              </p>
+            </div>
+
+            <div>
+              <p className="text-xs text-slate-500 mb-1">Unit</p>
+              <p className="font-medium text-slate-800 dark:text-slate-100">
+                {viewingProduct.unit || "—"}
+              </p>
+            </div>
+
+            <div>
+              <p className="text-xs text-slate-500 mb-1">GST Percentage</p>
+              <p className="font-medium text-slate-800 dark:text-slate-100">
+                {viewingProduct.gst_percentage ??
+                  viewingProduct.gstPercentage ??
+                  0}
+                %
+              </p>
+            </div>
+
+            <div>
+              <p className="text-xs text-slate-500 mb-1">Cost Price</p>
+              <p className="font-medium text-slate-800 dark:text-slate-100">
+                {formatINR(
+                  Number(
+                    viewingProduct.cost_price ?? viewingProduct.costPrice ?? 0,
+                  ),
+                )}
+              </p>
+            </div>
+
+            <div>
+              <p className="text-xs text-slate-500 mb-1">Selling Price</p>
+              <p className="font-medium text-slate-800 dark:text-slate-100">
+                {formatINR(
+                  Number(
+                    viewingProduct.selling_price ??
+                      viewingProduct.sellingPrice ??
+                      0,
+                  ),
+                )}
+              </p>
+            </div>
+
+            <div>
+              <p className="text-xs text-slate-500 mb-1">Margin</p>
+
+              {(() => {
+                const cost = Number(
+                  viewingProduct.cost_price ?? viewingProduct.costPrice ?? 0,
+                );
+
+                const selling = Number(
+                  viewingProduct.selling_price ??
+                    viewingProduct.sellingPrice ??
+                    0,
+                );
+
+                const margin = selling - cost;
+
+                const percentage =
+                  selling > 0 ? ((margin / selling) * 100).toFixed(0) : 0;
+
+                return (
+                  <Badge
+                    tone={
+                      Number(percentage) >= 30
+                        ? "success"
+                        : Number(percentage) >= 15
+                          ? "warning"
+                          : "danger"
+                    }
+                  >
+                    {formatINR(margin)} ({percentage}%)
+                  </Badge>
+                );
+              })()}
+            </div>
+
+            <div className="sm:col-span-2">
+              <p className="text-xs text-slate-500 mb-1">Description</p>
+
+              <p className="text-sm text-slate-700 dark:text-slate-300">
+                {viewingProduct.description || "No description available."}
+              </p>
+            </div>
+          </div>
+        ) : null}
       </Modal>
     </div>
   );
