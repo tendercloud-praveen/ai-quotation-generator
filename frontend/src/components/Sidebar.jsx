@@ -7,7 +7,10 @@ import { ROLE_LABELS } from '../lib/nav';
 export default function Sidebar({ open, onClose }) {
   const { effectiveRole, user } = useRole();
   const location = useLocation();
-  const items = NAV_ITEMS.filter((i) => i.roles.includes(effectiveRole));
+  // const items = NAV_ITEMS.filter((i) => i.roles.includes(effectiveRole));
+  const items = NAV_ITEMS.filter(
+  (i) => i.roles.includes(effectiveRole) && i.label !== 'Reports'
+);
 
   return (
     <>

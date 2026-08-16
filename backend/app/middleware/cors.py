@@ -5,7 +5,7 @@ def add_cors(app):
         CORSMiddleware,
         allow_origins=[
             "http://localhost:5173",
-            "http://192.168.0.221:5173",
+            # "http://192.168.0.221:5173",
         ],
         allow_credentials=True,
         allow_methods=["*"],
