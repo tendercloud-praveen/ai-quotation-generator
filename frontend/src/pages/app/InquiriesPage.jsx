@@ -1026,7 +1026,7 @@ export default function InquiriesPage() {
                 <span className="text-red-500 ml-0.5">*</span>
               </label>
 
-              <div className="flex items-center gap-2">
+              {/* <div className="flex items-center gap-2">
                 {SAMPLE_INQUIRIES.slice(0, 2).map((s, i) => (
                   <button
                     key={i}
@@ -1041,7 +1041,7 @@ export default function InquiriesPage() {
                     Sample {i + 1}
                   </button>
                 ))}
-              </div>
+              </div> */}
             </div>
 
             <Textarea
