@@ -73,7 +73,7 @@ def dispatch_quotation_api(
 ):
 
     # Only Admin and Sales can dispatch
-    if current_user.role not in ["ADMIN", "sales"]:
+    if current_user.role not in ["ADMIN", "sales","sales_rep"]:
         raise HTTPException(
             status_code=403,
             detail="Only Admin or Sales Person can dispatch quotation"

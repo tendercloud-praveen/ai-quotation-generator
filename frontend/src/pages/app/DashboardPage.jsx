@@ -247,8 +247,10 @@ export default function DashboardPage() {
       </div>
 
       {/* Stat cards — role-specific */}
+      {/* Stat cards — role-specific */}
       {effectiveRole === "admin" && (
         <div className="grid grid-cols-2 lg:grid-cols-4 gap-4">
+          {/* Row 1 */}
           <StatCard
             label="Total Quotations"
             value={stats.total}
@@ -256,6 +258,7 @@ export default function DashboardPage() {
             tone="brand"
             trend={12}
           />
+
           <StatCard
             label="Pending Approval"
             value={stats.pending}
@@ -263,6 +266,7 @@ export default function DashboardPage() {
             tone="warning"
             trend={-4}
           />
+
           <StatCard
             label="Approved"
             value={stats.approved}
@@ -270,6 +274,7 @@ export default function DashboardPage() {
             tone="success"
             trend={8}
           />
+
           <StatCard
             label="Dispatched"
             value={stats.dispatched}
@@ -277,48 +282,79 @@ export default function DashboardPage() {
             tone="info"
             trend={15}
           />
+
+          {/* Row 2 */}
           <StatCard
             label="Products"
             value={stats.productCount}
             icon={Package}
             tone="brand"
           />
+
           <StatCard
-            label={effectiveRole === "admin" ? "Team Members" : "Customers"}
-            value={
-              effectiveRole === "admin" ? stats.teamMembers : customers.length
-            }
+            label="Team Members"
+            value={stats.teamMembers}
             icon={Users}
             tone="info"
+          />
+
+          <StatCard
+            label="Total Revenue"
+            value={formatINR(stats.revenue)}
+            icon={IndianRupee}
+            tone="success"
+            trend={9}
+          />
+
+          <StatCard
+            label="Total Margin"
+            value={formatINR(stats.margin)}
+            icon={TrendingUp}
+            tone="accent"
+            trend={6}
           />
         </div>
       )}
 
       {effectiveRole === "manager" && (
         <div className="grid grid-cols-2 lg:grid-cols-4 gap-4">
+          {/* Row 1 */}
           <StatCard
             label="Pending Approvals"
             value={stats.pending}
             icon={Clock}
             tone="warning"
           />
+
           <StatCard
             label="Approved Quotations"
             value={stats.approved}
             icon={CheckCircle2}
             tone="success"
           />
+
           <StatCard
             label="Rejected"
             value={stats.rejected}
             icon={XCircle}
             tone="danger"
           />
+
+          {/* Row 2 */}
+          <StatCard
+            label="Total Revenue"
+            value={formatINR(stats.revenue)}
+            icon={IndianRupee}
+            tone="success"
+            trend={9}
+          />
+
           <StatCard
             label="Total Margin"
             value={formatINR(stats.margin)}
             icon={TrendingUp}
             tone="accent"
+            trend={6}
           />
         </div>
       )}
@@ -331,18 +367,21 @@ export default function DashboardPage() {
             icon={FileText}
             tone="brand"
           />
+
           <StatCard
             label="My Quotations"
             value={stats.total}
             icon={FileCheck2}
             tone="info"
           />
+
           <StatCard
             label="Pending Approval"
             value={stats.pending}
             icon={Clock}
             tone="warning"
           />
+
           <StatCard
             label="Approved"
             value={stats.approved}
@@ -351,28 +390,6 @@ export default function DashboardPage() {
           />
         </div>
       )}
-
-      <div className="grid grid-cols-2 lg:grid-cols-4 gap-4">
-        {(effectiveRole === "admin" || effectiveRole === "manager") && (
-          <>
-            <StatCard
-              label="Total Revenue"
-              value={formatINR(stats.revenue)}
-              icon={IndianRupee}
-              tone="success"
-              trend={9}
-            />
-
-            <StatCard
-              label="Total Margin"
-              value={formatINR(stats.margin)}
-              icon={TrendingUp}
-              tone="accent"
-              trend={6}
-            />
-          </>
-        )}
-      </div>
 
       {/* Charts row */}
       <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">

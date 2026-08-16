@@ -28,3 +28,22 @@ export const getManagersApi = async () => {
   const response = await axiosInstance.get("/managers/");
   return response.data;
 };
+
+export const downloadQuotationApi = async (quotationId) => {
+  const response = await axiosInstance.get(
+    `/quotation/${quotationId}/download`,
+    {
+      responseType: "blob",
+    },
+  );
+
+  return response;
+};
+
+export const dispatchQuotationApi = async (quotationId) => {
+  const response = await axiosInstance.put(
+    `/quotation/${quotationId}/dispatch`,
+  );
+
+  return response.data;
+};

@@ -381,14 +381,87 @@ export default function ApprovalsPage() {
    * ==========================================
    */
 
+  // const doAction = async () => {
+  //   if (!actionModal?.quotation?.id) {
+  //     toast.error("Invalid quotation.");
+
+  //     return;
+  //   }
+
+  //   const { quotation, action } = actionModal;
+
+  //   try {
+  //     setActionLoading(true);
+
+  //     let response;
+
+  //     /*
+  //      * APPROVE
+  //      */
+
+  //     if (action === "approve") {
+  //       response = await approveQuotationApi(quotation.id, comment);
+  //     } else if (action === "reject") {
+  //       //REJECT
+  //       response = await rejectQuotationApi(quotation.id, comment);
+  //     } else {
+  //       /*
+  //        * REQUEST CHANGES
+  //        */
+  //       response = await requestQuotationChangesApi(quotation.id, comment);
+  //     }
+
+  //     console.log("Quotation action response:", response);
+
+  //     toast.success(
+  //       action === "approve"
+  //         ? "Quotation approved!"
+  //         : action === "reject"
+  //           ? "Quotation rejected."
+  //           : "Changes requested.",
+  //     );
+
+  //     setActionModal(null);
+
+  //     setComment("");
+
+  //     /*
+  //      * IMPORTANT:
+  //      *
+  //      * Do not use:
+  //      *
+  //      * updateQuotation()
+  //      *
+  //      * Instead reload DB/API.
+  //      */
+
+  //     await loadPendingQuotations();
+  //   } catch (error) {
+  //     console.error("Quotation action failed:", error);
+
+  //     toast.error(
+  //       error?.response?.data?.detail ||
+  //         error?.response?.data?.message ||
+  //         "Failed to process quotation.",
+  //     );
+  //   } finally {
+  //     setActionLoading(false);
+  //   }
+  // };
+
   const doAction = async () => {
     if (!actionModal?.quotation?.id) {
       toast.error("Invalid quotation.");
-
       return;
     }
 
     const { quotation, action } = actionModal;
+
+    // Reject requires a reason
+    if (action === "reject" && !comment.trim()) {
+      toast.error("Please enter a reason for rejection.");
+      return;
+    }
 
     try {
       setActionLoading(true);
@@ -396,25 +469,40 @@ export default function ApprovalsPage() {
       let response;
 
       /*
+       * ==========================================
        * APPROVE
+       * ==========================================
        */
-
       if (action === "approve") {
-        response = await approveQuotationApi(quotation.id, comment);
+        response = await approveQuotationApi(quotation.id, comment.trim());
       } else if (action === "reject") {
-        /*
-         * REJECT
-         */
-        response = await rejectQuotationApi(quotation.id, comment);
-      } else {
-        /*
-         * REQUEST CHANGES
-         */
-        response = await requestQuotationChangesApi(quotation.id, comment);
+
+      /*
+       * ==========================================
+       * REJECT
+       * ==========================================
+       */
+        response = await rejectQuotationApi(quotation.id, comment.trim());
+      } else if (action === "request_changes") {
+
+      /*
+       * ==========================================
+       * REQUEST CHANGES
+       * ==========================================
+       */
+        response = await requestQuotationChangesApi(
+          quotation.id,
+          comment.trim(),
+        );
       }
 
       console.log("Quotation action response:", response);
 
+      /*
+       * ==========================================
+       * SUCCESS MESSAGE
+       * ==========================================
+       */
       toast.success(
         action === "approve"
           ? "Quotation approved!"
@@ -423,23 +511,23 @@ export default function ApprovalsPage() {
             : "Changes requested.",
       );
 
+      /*
+       * ==========================================
+       * CLOSE MODAL
+       * ==========================================
+       */
       setActionModal(null);
-
       setComment("");
 
       /*
-       * IMPORTANT:
-       *
-       * Do not use:
-       *
-       * updateQuotation()
-       *
-       * Instead reload DB/API.
+       * ==========================================
+       * RELOAD FROM BACKEND
+       * ==========================================
        */
-
       await loadPendingQuotations();
     } catch (error) {
       console.error("Quotation action failed:", error);
+      console.error("Backend response:", error?.response?.data);
 
       toast.error(
         error?.response?.data?.detail ||

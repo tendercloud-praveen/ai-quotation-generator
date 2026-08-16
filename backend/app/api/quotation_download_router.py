@@ -30,7 +30,8 @@ def download_quotation_api(
 
     if current_user.role not in [
         "ADMIN",
-        "SALES_PERSON"
+        "SALES_PERSON",
+        "sales_rep"
     ]:
         raise HTTPException(
             status_code=403,
