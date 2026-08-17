@@ -1,9 +1,13 @@
+import os
+
 from qdrant_client import QdrantClient
 from qdrant_client.models import Distance, VectorParams, PointStruct
 
+
+QDRANT_URL = os.getenv("QDRANT_URL", "http://localhost:6333")
+
 client = QdrantClient(
-    host="localhost",
-    port=6333
+    url=QDRANT_URL
 )
 
 COLLECTION_NAME = "products"
@@ -47,6 +51,7 @@ def store_product_embedding(product_id, embedding, search_text):
 
 
 def search_products(query_embedding, top_k=1):
+
     results = client.query_points(
         collection_name=COLLECTION_NAME,
         query=query_embedding,

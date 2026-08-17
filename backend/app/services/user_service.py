@@ -116,13 +116,13 @@ class UserService:
         # -----------------------------------------------------
         existing_email = db.query(User).filter(
             User.email == user.email,
-            User.company_id == company_id
+            # User.company_id == company_id
         ).first()
 
         if existing_email:
             raise HTTPException(
                 status_code=400,
-                detail="This email already exists in your company."
+                detail="Email already exists"
             )
 
         # -----------------------------------------------------
