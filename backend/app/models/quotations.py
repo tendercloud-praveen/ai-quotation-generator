@@ -93,6 +93,17 @@ class Quotation(Base):
         back_populates="quotation",
         cascade="all, delete-orphan"
     )
+    customer_id = Column(
+    Integer,
+    ForeignKey("customers.id"),
+    nullable=True
+)
+
+    customer = relationship(
+    "Customer",
+    back_populates="quotations"
+)
+
 
 
 # ============================================================

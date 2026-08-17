@@ -25,3 +25,7 @@ class Customer(Base):
 
     # Relationship with Company
     company = relationship("Company", back_populates="customers")
+    quotations = relationship(
+        "Quotation",
+        back_populates="customer"
+    )
