@@ -41,17 +41,6 @@ import { saveQuotationApi } from "../../services/quotationService";
 import { getProductApi } from "../../services/productService";
 
 /* =========================================================
-   SAMPLE INQUIRIES
-========================================================= */
-
-const SAMPLE_INQUIRIES = [
-  "Need 2 units of centrifugal pump 1.5HP and 4 gate valves 100mm for our cooling line.",
-  "Looking for 5 AC motors 2.2kW and 10 proximity sensors for conveyor automation.",
-  "Require 3 hydraulic cylinders 63mm and 1 gear pump 25cc for press machine.",
-  "Want 20 boxes of hex bolts M8x80 and 15 boxes hex nuts M10.",
-];
-
-/* =========================================================
    FILE SETTINGS
 ========================================================= */
 
@@ -1015,33 +1004,13 @@ export default function InquiriesPage() {
         }
       >
         <div className="space-y-5">
-          {/* =================================================
-              INQUIRY TEXT
-          ================================================= */}
-
+          {/* INQUIRY TEXT */}
           <div>
             <div className="flex items-center justify-between mb-1.5">
               <label className="text-sm font-medium text-slate-700 dark:text-slate-300">
                 Inquiry Text
                 <span className="text-red-500 ml-0.5">*</span>
               </label>
-
-              <div className="flex items-center gap-2">
-                {SAMPLE_INQUIRIES.slice(0, 2).map((s, i) => (
-                  <button
-                    key={i}
-                    onClick={() =>
-                      setForm({
-                        ...form,
-                        text: s,
-                      })
-                    }
-                    className="text-xs text-brand-600 hover:text-brand-700 dark:text-brand-400 font-medium"
-                  >
-                    Sample {i + 1}
-                  </button>
-                ))}
-              </div>
             </div>
 
             <Textarea
@@ -1063,9 +1032,7 @@ export default function InquiriesPage() {
             />
           </div>
 
-          {/* =================================================
-              FILE UPLOAD
-          ================================================= */}
+          {/* FILE UPLOAD */}
 
           <div>
             <label className="text-sm font-medium text-slate-700 dark:text-slate-300 mb-1.5 block">
@@ -1101,9 +1068,7 @@ export default function InquiriesPage() {
             )}
           </div>
 
-          {/* =================================================
-              PROCESSING
-          ================================================= */}
+          {/* PROCESSING */}
 
           {processing && (
             <div className="rounded-xl bg-brand-50 dark:bg-brand-950/40 border border-brand-200 dark:border-brand-800 p-4">
@@ -1123,9 +1088,7 @@ export default function InquiriesPage() {
             </div>
           )}
 
-          {/* =================================================
-              AI LOADING
-          ================================================= */}
+          {/* AI LOADING */}
 
           {aiLoading && !processing && (
             <div className="rounded-xl bg-brand-50 dark:bg-brand-950/40 border border-brand-200 dark:border-brand-800 p-4">
@@ -1139,9 +1102,7 @@ export default function InquiriesPage() {
             </div>
           )}
 
-          {/* =================================================
-              AI MATCH RESULTS
-          ================================================= */}
+          {/* AI MATCH RESULTS */}
 
           {aiResult && !aiLoading && !processing && (
             <div className="rounded-xl bg-emerald-50 dark:bg-emerald-950/40 border border-emerald-200 dark:border-emerald-800 p-4 animate-scale-in">
@@ -1295,9 +1256,7 @@ export default function InquiriesPage() {
         </div>
       </Modal>
 
-      {/* =================================================
-          UPLOAD BOTTOM SHEET
-      ================================================= */}
+      {/* UPLOAD BOTTOM SHEET */}
 
       <Modal
         open={uploadSheetOpen}
@@ -1395,9 +1354,7 @@ export default function InquiriesPage() {
         />
       </Modal>
 
-      {/* =================================================
-          VIEW INQUIRY
-      ================================================= */}
+      {/* VIEW INQUIRY */}
 
       <Modal
         open={!!viewInquiry}
