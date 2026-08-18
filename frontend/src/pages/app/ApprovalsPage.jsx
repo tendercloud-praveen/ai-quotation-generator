@@ -188,6 +188,9 @@ export default function ApprovalsPage() {
 
       margin: Number(quotation?.margin ?? 0),
 
+      marginPercentage: Number(
+        quotation?.margin_percentage ?? quotation?.marginPercentage ?? 0,
+      ),
       status: String(quotation?.status ?? "").toLowerCase(),
 
       assignedManagerId: quotation?.manager_id ?? quotation?.managerId,
@@ -476,20 +479,18 @@ export default function ApprovalsPage() {
       if (action === "approve") {
         response = await approveQuotationApi(quotation.id, comment.trim());
       } else if (action === "reject") {
-
-      /*
-       * ==========================================
-       * REJECT
-       * ==========================================
-       */
+        /*
+         * ==========================================
+         * REJECT
+         * ==========================================
+         */
         response = await rejectQuotationApi(quotation.id, comment.trim());
       } else if (action === "request_changes") {
-
-      /*
-       * ==========================================
-       * REQUEST CHANGES
-       * ==========================================
-       */
+        /*
+         * ==========================================
+         * REQUEST CHANGES
+         * ==========================================
+         */
         response = await requestQuotationChangesApi(
           quotation.id,
           comment.trim(),
@@ -688,22 +689,17 @@ export default function ApprovalsPage() {
 
     {
       key: "margin",
-
       header: "Margin",
-
       render: (q) => {
-        const margin = q.lines.reduce(
-          (sum, line) => sum + Number(line.margin || 0),
-          0,
-        );
+        const margin = Number(q.margin || 0);
 
-        const percentage = q.grandTotal
-          ? ((margin / q.grandTotal) * 100).toFixed(0)
-          : "0";
+        const percentage = Number(
+          q.marginPercentage ?? q.margin_percentage ?? 0,
+        );
 
         return (
           <span className="text-emerald-600 dark:text-emerald-400 font-medium">
-            {formatINR(margin)} ({percentage}%)
+            {formatINR(margin)} ({percentage.toFixed(2)}%)
           </span>
         );
       },

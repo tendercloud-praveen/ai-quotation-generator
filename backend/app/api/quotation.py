@@ -1,3 +1,624 @@
+# from datetime import datetime
+
+# from fastapi import APIRouter, Depends, HTTPException
+# from sqlalchemy.orm import Session
+
+# from app.database.database import get_db
+# from app.models.quotations import Quotation, QuotationItem
+# from app.schemas.quotation import QuotationCreate, SubmitQuotation
+# from app.utils.auth import get_current_user
+# from app.models.user import User
+# from app.models.customer import Customer
+
+
+# router = APIRouter(
+#     prefix="/quotations",
+#     tags=["Quotations"]
+# )
+
+# # ============================================================
+# # GET ALL QUOTATIONS
+# # ============================================================
+# @router.get("/")
+# def get_quotations(
+#     db: Session = Depends(get_db),
+#     current_user=Depends(get_current_user)
+# ):
+#     quotations = (
+#         db.query(Quotation)
+#         .filter(
+#             Quotation.company_id == current_user.company_id
+#         )
+#         .order_by(
+#             Quotation.created_at.desc()
+#         )
+#         .all()
+#     )
+
+#     result = []
+
+#     for quotation in quotations:
+
+#         # Get quotation items
+#         items = (
+#             db.query(QuotationItem)
+#             .filter(
+#                 QuotationItem.quotation_id == quotation.id
+#             )
+#             .all()
+#         )
+
+#         response_items = []
+
+#         total_margin = 0
+
+#         for item in items:
+
+#             # We need cost price from Product
+#             from app.models.product import Product
+
+#             product = (
+#                 db.query(Product)
+#                 .filter(
+#                     Product.id == item.product_id
+#                 )
+#                 .first()
+#             )
+
+#             cost_price = (
+#                 float(product.cost_price)
+#                 if product
+#                 else 0
+#             )
+
+#             quantity = float(item.quantity)
+#             unit_price = float(item.unit_price)
+
+#             margin = (
+#                 unit_price - cost_price
+#             ) * quantity
+
+#             total_margin += margin
+
+#             response_items.append({
+#                 "quotation_item_id": item.id,
+#                 "product_id": item.product_id,
+#                 "product_name": item.product_name,
+#                 "quantity": item.quantity,
+#                 "unit": item.unit,
+#                 "unit_price": unit_price,
+#                 "cost_price": cost_price,
+#                 "gst_percentage": float(
+#                     item.gst_percentage
+#                 ),
+#                 "subtotal": float(
+#                     item.subtotal
+#                 ),
+#                 "gst_amount": float(
+#                     item.gst_amount
+#                 ),
+#                 "total_price": float(
+#                     item.total_price
+#                 ),
+#                 "margin": round(
+#                     margin,
+#                     2
+#                 )
+#             })
+
+#         # Get salesperson
+#         salesperson = (
+#             db.query(User)
+#             .filter(
+#                 User.id == quotation.user_id
+#             )
+#             .first()
+#         )
+
+#         salesperson_name = None
+#         salesperson_email = None
+
+#         if salesperson:
+#             salesperson_name = (
+#                 getattr(
+#                     salesperson,
+#                     "full_name",
+#                     None
+#                 )
+#                 or getattr(
+#                     salesperson,
+#                     "username",
+#                     None
+#                 )
+#                 or salesperson.email
+#             )
+
+#             salesperson_email = salesperson.email
+        
+
+#         result.append({
+#             "quotation_id": quotation.id,
+
+#             "quotation_number":
+#                 quotation.quotation_number,
+
+#             "inquiry_text":
+#                 quotation.inquiry_text,
+
+#             "created_by": {
+#                 "user_id":
+#                     quotation.user_id,
+
+#                 "name":
+#                     salesperson_name,
+
+#                 "email":
+#                     salesperson_email
+#             },
+
+#             "items":
+#                 response_items,
+
+#             "subtotal":
+#                 float(quotation.subtotal),
+
+#             "total_gst":
+#                 float(quotation.total_gst),
+
+#             "grand_total":
+#                 float(quotation.grand_total),
+
+#             "amount":
+#                 float(quotation.grand_total),
+
+#             "margin":
+#                 round(
+#                     total_margin,
+#                     2
+#                 ),
+
+#             "status":
+#                 quotation.status,
+
+#             "manager_id":
+#                 quotation.manager_id,
+
+#             "submitted_at":
+#                 quotation.submitted_at,
+
+#             "created_at":
+#                 quotation.created_at,
+
+#             "updated_at":
+#                 quotation.updated_at
+#         })
+
+#     return {
+#         "status": "success",
+#         "count": len(result),
+#         "quotations": result
+#     }
+
+
+# # ============================================================
+# # GET ALL QUOTATIONS
+# # ============================================================
+# @router.get("/")
+# def get_quotations(
+#     db: Session = Depends(get_db),
+#     current_user=Depends(get_current_user)
+# ):
+#     quotations = (
+#         db.query(Quotation)
+#         .filter(
+#             Quotation.company_id == current_user.company_id
+#         )
+#         .order_by(
+#             Quotation.created_at.desc()
+#         )
+#         .all()
+#     )
+
+#     result = []
+
+#     for quotation in quotations:
+
+#         # Get quotation items
+#         items = (
+#             db.query(QuotationItem)
+#             .filter(
+#                 QuotationItem.quotation_id == quotation.id
+#             )
+#             .all()
+#         )
+
+#         response_items = []
+
+#         total_margin = 0
+
+#         for item in items:
+
+#             # We need cost price from Product
+#             from app.models.product import Product
+
+#             product = (
+#                 db.query(Product)
+#                 .filter(
+#                     Product.id == item.product_id
+#                 )
+#                 .first()
+#             )
+
+#             cost_price = (
+#                 float(product.cost_price)
+#                 if product
+#                 else 0
+#             )
+
+#             quantity = float(item.quantity)
+#             unit_price = float(item.unit_price)
+
+#             margin = (
+#                 unit_price - cost_price
+#             ) * quantity
+
+#             total_margin += margin
+
+#             response_items.append({
+#                 "quotation_item_id": item.id,
+#                 "product_id": item.product_id,
+#                 "product_name": item.product_name,
+#                 "quantity": item.quantity,
+#                 "unit": item.unit,
+#                 "unit_price": unit_price,
+#                 "cost_price": cost_price,
+#                 "gst_percentage": float(
+#                     item.gst_percentage
+#                 ),
+#                 "subtotal": float(
+#                     item.subtotal
+#                 ),
+#                 "gst_amount": float(
+#                     item.gst_amount
+#                 ),
+#                 "total_price": float(
+#                     item.total_price
+#                 ),
+#                 "margin": round(
+#                     margin,
+#                     2
+#                 )
+#             })
+
+#         # Get salesperson
+#         salesperson = (
+#             db.query(User)
+#             .filter(
+#                 User.id == quotation.user_id
+#             )
+#             .first()
+#         )
+
+#         salesperson_name = None
+#         salesperson_email = None
+
+#         if salesperson:
+#             salesperson_name = (
+#                 getattr(
+#                     salesperson,
+#                     "full_name",
+#                     None
+#                 )
+#                 or getattr(
+#                     salesperson,
+#                     "username",
+#                     None
+#                 )
+#                 or salesperson.email
+#             )
+
+#             salesperson_email = salesperson.email
+
+#         result.append({
+#             "quotation_id": quotation.id,
+
+#             "quotation_number":
+#                 quotation.quotation_number,
+
+#             "inquiry_text":
+#                 quotation.inquiry_text,
+
+#             "created_by": {
+#                 "user_id":
+#                     quotation.user_id,
+
+#                 "name":
+#                     salesperson_name,
+
+#                 "email":
+#                     salesperson_email
+#             },
+
+#             "items":
+#                 response_items,
+
+#             "subtotal":
+#                 float(quotation.subtotal),
+
+#             "total_gst":
+#                 float(quotation.total_gst),
+
+#             "grand_total":
+#                 float(quotation.grand_total),
+
+#             "amount":
+#                 float(quotation.grand_total),
+
+#             "margin":
+#                 round(
+#                     total_margin,
+#                     2
+#                 ),
+
+#             "status":
+#                 quotation.status,
+
+#             "manager_id":
+#                 quotation.manager_id,
+
+#             "submitted_at":
+#                 quotation.submitted_at,
+
+#             "created_at":
+#                 quotation.created_at,
+
+#             "updated_at":
+#                 quotation.updated_at
+#         })
+
+#     return {
+#         "status": "success",
+#         "count": len(result),
+#         "quotations": result
+#     }
+
+# # ============================================================
+# # 1. SAVE QUOTATION AS DRAFT
+# # ============================================================
+
+# @router.post("/")
+# def save_quotation(
+#     quotation_data: QuotationCreate,
+#     db: Session = Depends(get_db),
+#     current_user=Depends(get_current_user)
+# ):
+
+#     try:
+#         # ----------------------------------------------------
+#         # Get logged-in user information
+#         # ----------------------------------------------------
+
+#         user_id = current_user.id
+#         company_id = current_user.company_id
+
+#         # ----------------------------------------------------
+#         # Generate quotation number
+#         # ----------------------------------------------------
+
+#         last_quotation = (
+#             db.query(Quotation)
+#             .order_by(Quotation.id.desc())
+#             .first()
+#         )
+
+#         if last_quotation:
+#             quotation_number = f"QT-{last_quotation.id + 1:04d}"
+#         else:
+#             quotation_number = "QT-0001"
+
+#         # ----------------------------------------------------
+#         # Create quotation
+#         # ----------------------------------------------------
+
+#         quotation = Quotation(
+#             quotation_number=quotation_number,
+#             user_id=user_id,
+#             company_id=company_id,
+#             customer_id=quotation_data.customer_id,
+#             inquiry_text=quotation_data.inquiry_text,
+
+#             subtotal=quotation_data.summary.subtotal,
+#             total_gst=quotation_data.summary.total_gst,
+#             grand_total=quotation_data.summary.grand_total,
+
+#             status="DRAFT"
+#         )
+#         db.add(quotation)
+
+#         # Get quotation ID
+#         db.flush()
+
+#         # ----------------------------------------------------
+#         # Save quotation items
+#         # ----------------------------------------------------
+
+#         for item in quotation_data.items:
+
+#             quotation_item = QuotationItem(
+#                 quotation_id=quotation.id,
+
+#                 product_id=item.product_id,
+#                 product_name=item.product_name,
+
+#                 quantity=item.quantity,
+#                 unit=item.unit,
+
+#                 unit_price=item.unit_price,
+#                 gst_percentage=item.gst_percentage,
+
+#                 subtotal=item.subtotal,
+#                 gst_amount=item.gst_amount,
+#                 total_price=item.total_price
+#             )
+
+#             db.add(quotation_item)
+
+#         # ----------------------------------------------------
+#         # Save everything
+#         # ----------------------------------------------------
+
+#         db.commit()
+#         db.refresh(quotation)
+
+#         # ----------------------------------------------------
+#         # Response
+#         # ----------------------------------------------------
+
+#         return {
+#             "status": "success",
+#             "quotation_id": quotation.id,
+#             "quotation_number": quotation.quotation_number,
+#             "user_id": user_id,
+#             "company_id": company_id,
+#             "quotation_status": quotation.status,
+#             "message": "Quotation saved as draft"
+#         }
+
+#     except Exception as e:
+
+#         db.rollback()
+
+#         raise HTTPException(
+#             status_code=500,
+#             detail=str(e)
+#         )
+
+
+# # ============================================================
+# # 2. SEND QUOTATION FOR APPROVAL
+# # ============================================================
+
+# @router.post("/{quotation_id}/submit")
+# def submit_quotation(
+#     quotation_id: int,
+#     data: SubmitQuotation,
+#     db: Session = Depends(get_db),
+#     current_user=Depends(get_current_user)
+# ):
+
+#     # --------------------------------------------------------
+#     # Step 1: Find quotation
+#     # --------------------------------------------------------
+
+#     quotation = (
+#         db.query(Quotation)
+#         .filter(
+#             Quotation.id == quotation_id,
+#             Quotation.user_id == current_user.id,
+#             Quotation.company_id == current_user.company_id
+#         )
+#         .first()
+#     )
+
+#     if not quotation:
+#         raise HTTPException(
+#             status_code=404,
+#             detail="Quotation not found"
+#         )
+
+#     # --------------------------------------------------------
+#     # Step 2: Check quotation status
+#     # --------------------------------------------------------
+
+#     if quotation.status != "DRAFT":
+#         raise HTTPException(
+#             status_code=400,
+#             detail="Only draft quotations can be submitted"
+#         )
+
+#     # --------------------------------------------------------
+#     # Step 3: Find manager
+#     # --------------------------------------------------------
+
+#     manager = (
+#         db.query(User)
+#         .filter(
+#             User.id == data.manager_id,
+#             User.company_id == current_user.company_id,
+#             User.is_active == True
+#         )
+#         .first()
+#     )
+
+#     if not manager:
+#         raise HTTPException(
+#             status_code=404,
+#             detail="Manager not found"
+#         )
+
+#     # --------------------------------------------------------
+#     # Step 4: Check manager role
+#     # --------------------------------------------------------
+
+#     # Your database has "manager" in lowercase.
+#     # So convert it to lowercase before checking.
+
+#     manager_role = str(manager.role).lower()
+
+#     # If role is an Enum, use its value
+#     if hasattr(manager.role, "value"):
+#         manager_role = str(manager.role.value).lower()
+
+#     if manager_role != "manager":
+#         raise HTTPException(
+#             status_code=400,
+#             detail="Selected user is not a manager"
+#         )
+
+#     # --------------------------------------------------------
+#     # Step 5: Assign manager
+#     # --------------------------------------------------------
+
+#     quotation.manager_id = manager.id
+
+#     # --------------------------------------------------------
+#     # Step 6: Change quotation status
+#     # --------------------------------------------------------
+
+#     quotation.status = "PENDING_APPROVAL"
+
+#     # --------------------------------------------------------
+#     # Step 7: Save submission time
+#     # --------------------------------------------------------
+
+#     quotation.submitted_at = datetime.utcnow()
+
+#     # --------------------------------------------------------
+#     # Step 8: Save to database
+#     # --------------------------------------------------------
+
+#     db.commit()
+#     db.refresh(quotation)
+
+#     # --------------------------------------------------------
+#     # Step 9: Return response
+#     # --------------------------------------------------------
+
+#     return {
+#         "status": "success",
+#         "quotation_id": quotation.id,
+#         "quotation_number": quotation.quotation_number,
+#         "manager_id": manager.id,
+#         "manager_name": manager.full_name,
+#         "manager_email": manager.email,
+#         "quotation_status": quotation.status,
+#         "submitted_at": quotation.submitted_at,
+#         "message": "Quotation sent for approval"
+#     }
+
+
+
+
 from datetime import datetime
 
 from fastapi import APIRouter, Depends, HTTPException
@@ -8,6 +629,7 @@ from app.models.quotations import Quotation, QuotationItem
 from app.schemas.quotation import QuotationCreate, SubmitQuotation
 from app.utils.auth import get_current_user
 from app.models.user import User
+from app.models.customer import Customer
 
 
 router = APIRouter(
@@ -15,9 +637,11 @@ router = APIRouter(
     tags=["Quotations"]
 )
 
+
 # ============================================================
 # GET ALL QUOTATIONS
 # ============================================================
+
 @router.get("/")
 def get_quotations(
     db: Session = Depends(get_db),
@@ -38,7 +662,10 @@ def get_quotations(
 
     for quotation in quotations:
 
+        # ----------------------------------------------------
         # Get quotation items
+        # ----------------------------------------------------
+
         items = (
             db.query(QuotationItem)
             .filter(
@@ -53,7 +680,6 @@ def get_quotations(
 
         for item in items:
 
-            # We need cost price from Product
             from app.models.product import Product
 
             product = (
@@ -105,7 +731,10 @@ def get_quotations(
                 )
             })
 
+        # ----------------------------------------------------
         # Get salesperson
+        # ----------------------------------------------------
+
         salesperson = (
             db.query(User)
             .filter(
@@ -134,11 +763,38 @@ def get_quotations(
 
             salesperson_email = salesperson.email
 
+        # ----------------------------------------------------
+        # Get customer
+        # ----------------------------------------------------
+
+        customer = (
+            db.query(Customer)
+            .filter(
+                Customer.id == quotation.customer_id
+            )
+            .first()
+        )
+
+        customer_name = None
+
+        if customer:
+            customer_name = customer.company_name
+
+        # ----------------------------------------------------
+        # Build response
+        # ----------------------------------------------------
+
         result.append({
             "quotation_id": quotation.id,
 
             "quotation_number":
                 quotation.quotation_number,
+
+            "customer_id":
+                quotation.customer_id,
+
+            "customer_name":
+                customer_name,
 
             "inquiry_text":
                 quotation.inquiry_text,
@@ -199,189 +855,7 @@ def get_quotations(
 
 
 # ============================================================
-# GET ALL QUOTATIONS
-# ============================================================
-@router.get("/")
-def get_quotations(
-    db: Session = Depends(get_db),
-    current_user=Depends(get_current_user)
-):
-    quotations = (
-        db.query(Quotation)
-        .filter(
-            Quotation.company_id == current_user.company_id
-        )
-        .order_by(
-            Quotation.created_at.desc()
-        )
-        .all()
-    )
-
-    result = []
-
-    for quotation in quotations:
-
-        # Get quotation items
-        items = (
-            db.query(QuotationItem)
-            .filter(
-                QuotationItem.quotation_id == quotation.id
-            )
-            .all()
-        )
-
-        response_items = []
-
-        total_margin = 0
-
-        for item in items:
-
-            # We need cost price from Product
-            from app.models.product import Product
-
-            product = (
-                db.query(Product)
-                .filter(
-                    Product.id == item.product_id
-                )
-                .first()
-            )
-
-            cost_price = (
-                float(product.cost_price)
-                if product
-                else 0
-            )
-
-            quantity = float(item.quantity)
-            unit_price = float(item.unit_price)
-
-            margin = (
-                unit_price - cost_price
-            ) * quantity
-
-            total_margin += margin
-
-            response_items.append({
-                "quotation_item_id": item.id,
-                "product_id": item.product_id,
-                "product_name": item.product_name,
-                "quantity": item.quantity,
-                "unit": item.unit,
-                "unit_price": unit_price,
-                "cost_price": cost_price,
-                "gst_percentage": float(
-                    item.gst_percentage
-                ),
-                "subtotal": float(
-                    item.subtotal
-                ),
-                "gst_amount": float(
-                    item.gst_amount
-                ),
-                "total_price": float(
-                    item.total_price
-                ),
-                "margin": round(
-                    margin,
-                    2
-                )
-            })
-
-        # Get salesperson
-        salesperson = (
-            db.query(User)
-            .filter(
-                User.id == quotation.user_id
-            )
-            .first()
-        )
-
-        salesperson_name = None
-        salesperson_email = None
-
-        if salesperson:
-            salesperson_name = (
-                getattr(
-                    salesperson,
-                    "full_name",
-                    None
-                )
-                or getattr(
-                    salesperson,
-                    "username",
-                    None
-                )
-                or salesperson.email
-            )
-
-            salesperson_email = salesperson.email
-
-        result.append({
-            "quotation_id": quotation.id,
-
-            "quotation_number":
-                quotation.quotation_number,
-
-            "inquiry_text":
-                quotation.inquiry_text,
-
-            "created_by": {
-                "user_id":
-                    quotation.user_id,
-
-                "name":
-                    salesperson_name,
-
-                "email":
-                    salesperson_email
-            },
-
-            "items":
-                response_items,
-
-            "subtotal":
-                float(quotation.subtotal),
-
-            "total_gst":
-                float(quotation.total_gst),
-
-            "grand_total":
-                float(quotation.grand_total),
-
-            "amount":
-                float(quotation.grand_total),
-
-            "margin":
-                round(
-                    total_margin,
-                    2
-                ),
-
-            "status":
-                quotation.status,
-
-            "manager_id":
-                quotation.manager_id,
-
-            "submitted_at":
-                quotation.submitted_at,
-
-            "created_at":
-                quotation.created_at,
-
-            "updated_at":
-                quotation.updated_at
-        })
-
-    return {
-        "status": "success",
-        "count": len(result),
-        "quotations": result
-    }
-
-# ============================================================
-# 1. SAVE QUOTATION AS DRAFT
+# SAVE QUOTATION AS DRAFT
 # ============================================================
 
 @router.post("/")
@@ -392,6 +866,7 @@ def save_quotation(
 ):
 
     try:
+
         # ----------------------------------------------------
         # Get logged-in user information
         # ----------------------------------------------------
@@ -405,12 +880,16 @@ def save_quotation(
 
         last_quotation = (
             db.query(Quotation)
-            .order_by(Quotation.id.desc())
+            .order_by(
+                Quotation.id.desc()
+            )
             .first()
         )
 
         if last_quotation:
-            quotation_number = f"QT-{last_quotation.id + 1:04d}"
+            quotation_number = (
+                f"QT-{last_quotation.id + 1:04d}"
+            )
         else:
             quotation_number = "QT-0001"
 
@@ -420,12 +899,19 @@ def save_quotation(
 
         quotation = Quotation(
             quotation_number=quotation_number,
+
             user_id=user_id,
+
             company_id=company_id,
+
+            customer_id=quotation_data.customer_id,
+
             inquiry_text=quotation_data.inquiry_text,
 
             subtotal=quotation_data.summary.subtotal,
+
             total_gst=quotation_data.summary.total_gst,
+
             grand_total=quotation_data.summary.grand_total,
 
             status="DRAFT"
@@ -433,7 +919,10 @@ def save_quotation(
 
         db.add(quotation)
 
+        # ----------------------------------------------------
         # Get quotation ID
+        # ----------------------------------------------------
+
         db.flush()
 
         # ----------------------------------------------------
@@ -446,16 +935,21 @@ def save_quotation(
                 quotation_id=quotation.id,
 
                 product_id=item.product_id,
+
                 product_name=item.product_name,
 
                 quantity=item.quantity,
+
                 unit=item.unit,
 
                 unit_price=item.unit_price,
+
                 gst_percentage=item.gst_percentage,
 
                 subtotal=item.subtotal,
+
                 gst_amount=item.gst_amount,
+
                 total_price=item.total_price
             )
 
@@ -466,6 +960,7 @@ def save_quotation(
         # ----------------------------------------------------
 
         db.commit()
+
         db.refresh(quotation)
 
         # ----------------------------------------------------
@@ -474,12 +969,27 @@ def save_quotation(
 
         return {
             "status": "success",
-            "quotation_id": quotation.id,
-            "quotation_number": quotation.quotation_number,
-            "user_id": user_id,
-            "company_id": company_id,
-            "quotation_status": quotation.status,
-            "message": "Quotation saved as draft"
+
+            "quotation_id":
+                quotation.id,
+
+            "quotation_number":
+                quotation.quotation_number,
+
+            "user_id":
+                user_id,
+
+            "company_id":
+                company_id,
+
+            "customer_id":
+                quotation.customer_id,
+
+            "quotation_status":
+                quotation.status,
+
+            "message":
+                "Quotation saved as draft"
         }
 
     except Exception as e:
@@ -493,7 +1003,7 @@ def save_quotation(
 
 
 # ============================================================
-# 2. SEND QUOTATION FOR APPROVAL
+# SEND QUOTATION FOR APPROVAL
 # ============================================================
 
 @router.post("/{quotation_id}/submit")
@@ -512,13 +1022,16 @@ def submit_quotation(
         db.query(Quotation)
         .filter(
             Quotation.id == quotation_id,
+
             Quotation.user_id == current_user.id,
+
             Quotation.company_id == current_user.company_id
         )
         .first()
     )
 
     if not quotation:
+
         raise HTTPException(
             status_code=404,
             detail="Quotation not found"
@@ -529,6 +1042,7 @@ def submit_quotation(
     # --------------------------------------------------------
 
     if quotation.status != "DRAFT":
+
         raise HTTPException(
             status_code=400,
             detail="Only draft quotations can be submitted"
@@ -542,13 +1056,16 @@ def submit_quotation(
         db.query(User)
         .filter(
             User.id == data.manager_id,
+
             User.company_id == current_user.company_id,
+
             User.is_active == True
         )
         .first()
     )
 
     if not manager:
+
         raise HTTPException(
             status_code=404,
             detail="Manager not found"
@@ -558,16 +1075,21 @@ def submit_quotation(
     # Step 4: Check manager role
     # --------------------------------------------------------
 
-    # Your database has "manager" in lowercase.
-    # So convert it to lowercase before checking.
-
-    manager_role = str(manager.role).lower()
+    manager_role = str(
+        manager.role
+    ).lower()
 
     # If role is an Enum, use its value
-    if hasattr(manager.role, "value"):
-        manager_role = str(manager.role.value).lower()
+    if hasattr(
+        manager.role,
+        "value"
+    ):
+        manager_role = str(
+            manager.role.value
+        ).lower()
 
     if manager_role != "manager":
+
         raise HTTPException(
             status_code=400,
             detail="Selected user is not a manager"
@@ -596,6 +1118,7 @@ def submit_quotation(
     # --------------------------------------------------------
 
     db.commit()
+
     db.refresh(quotation)
 
     # --------------------------------------------------------
@@ -604,12 +1127,28 @@ def submit_quotation(
 
     return {
         "status": "success",
-        "quotation_id": quotation.id,
-        "quotation_number": quotation.quotation_number,
-        "manager_id": manager.id,
-        "manager_name": manager.full_name,
-        "manager_email": manager.email,
-        "quotation_status": quotation.status,
-        "submitted_at": quotation.submitted_at,
-        "message": "Quotation sent for approval"
+
+        "quotation_id":
+            quotation.id,
+
+        "quotation_number":
+            quotation.quotation_number,
+
+        "manager_id":
+            manager.id,
+
+        "manager_name":
+            manager.full_name,
+
+        "manager_email":
+            manager.email,
+
+        "quotation_status":
+            quotation.status,
+
+        "submitted_at":
+            quotation.submitted_at,
+
+        "message":
+            "Quotation sent for approval"
     }
