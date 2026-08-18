@@ -364,17 +364,7 @@ export default function CustomersPage() {
 
       console.log("GET /customers/ response:", response);
 
-      const data = response?.data ?? [];
-
-      // Backend:
-      //
-      // company_name
-      // contact_person
-      //
-      // Frontend:
-      //
-      // name
-      // contactPerson
+      const data = Array.isArray(response) ? response : (response?.data ?? []);
 
       const mappedCustomers = data.map((customer) => ({
         id: customer.id,
@@ -388,10 +378,6 @@ export default function CustomersPage() {
         mobile: customer.mobile ?? "",
 
         address: customer.address ?? "",
-
-        // Backend currently does not return createdAt
-        // so we don't invent a date.
-        createdAt: customer.created_at ?? customer.createdAt ?? null,
       }));
 
       setCustomers(mappedCustomers);
@@ -476,8 +462,6 @@ export default function CustomersPage() {
         mobile: data.mobile ?? "",
 
         address: data.address ?? "",
-
-        createdAt: data.created_at ?? data.createdAt ?? null,
       };
 
       setEditing(customerData);
@@ -717,20 +701,6 @@ export default function CustomersPage() {
       render: (c) => (
         <span className="text-slate-500 dark:text-slate-400 truncate max-w-[200px] block">
           {c.address || "-"}
-        </span>
-      ),
-    },
-
-    {
-      key: "createdAt",
-
-      header: "Added",
-
-      sortable: true,
-
-      render: (c) => (
-        <span className="text-slate-500 dark:text-slate-400">
-          {c.createdAt ? formatDate(c.createdAt) : "-"}
         </span>
       ),
     },

@@ -47,3 +47,11 @@ export const dispatchQuotationApi = async (quotationId) => {
 
   return response.data;
 };
+
+export const sendQuotationWhatsappApi = async (quotationId) => {
+  const response = await axiosInstance.post(
+    `/whatsapp/quotation/${quotationId}`,
+  );
+
+  return response.data;
+};

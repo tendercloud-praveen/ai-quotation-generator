@@ -8,7 +8,7 @@ from app.schemas.customer import (
     CustomerResponse,
 )
 from app.services import customer_service
-from app.utils.auth import get_current_admin
+from app.utils.auth import get_current_user
 
 
 router = APIRouter(
@@ -25,9 +25,9 @@ router = APIRouter(
 def create_customer(
     customer_data: CustomerCreate,
     db: Session = Depends(get_db),
-    current_admin=Depends(get_current_admin)
+    current_user=Depends(get_current_user)
 ):
-    company_id = current_admin.company_id
+    company_id = current_user.company_id
 
     return customer_service.create_customer(
         db=db,
@@ -42,9 +42,9 @@ def create_customer(
 )
 def get_customers(
     db: Session = Depends(get_db),
-    current_admin=Depends(get_current_admin)
+    current_user=Depends(get_current_user)
 ):
-    company_id = current_admin.company_id
+    company_id = current_user.company_id
 
     return customer_service.get_customers(
         db=db,
@@ -59,9 +59,9 @@ def get_customers(
 def get_customer(
     customer_id: int,
     db: Session = Depends(get_db),
-    current_admin=Depends(get_current_admin)
+    current_user=Depends(get_current_user)
 ):
-    company_id = current_admin.company_id
+    company_id = current_user.company_id
 
     return customer_service.get_customer_by_id(
         db=db,
@@ -78,9 +78,9 @@ def update_customer(
     customer_id: int,
     customer_data: CustomerUpdate,
     db: Session = Depends(get_db),
-    current_admin=Depends(get_current_admin)
+    current_user=Depends(get_current_user)
 ):
-    company_id = current_admin.company_id
+    company_id = current_user.company_id
 
     return customer_service.update_customer(
         db=db,
@@ -96,9 +96,9 @@ def update_customer(
 def delete_customer(
     customer_id: int,
     db: Session = Depends(get_db),
-    current_admin=Depends(get_current_admin)
+    current_user=Depends(get_current_user)
 ):
-    company_id = current_admin.company_id
+    company_id = current_user.company_id
 
     return customer_service.delete_customer(
         db=db,

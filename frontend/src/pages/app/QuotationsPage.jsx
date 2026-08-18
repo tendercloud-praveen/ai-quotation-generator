@@ -9,6 +9,8 @@ import {
   Trash2,
   Clock,
   Save,
+  MessageCircle,
+  X,
 } from "lucide-react";
 
 import PageHeader from "../../components/PageHeader";
@@ -39,6 +41,7 @@ import {
   getManagersApi,
   downloadQuotationApi,
   dispatchQuotationApi,
+  sendQuotationWhatsappApi,
 } from "../../services/quotationService";
 
 import { addNotification } from "../../lib/notifications";
@@ -74,6 +77,8 @@ export default function QuotationsPage() {
   const [viewId, setViewId] = useState(null);
   const [editId, setEditId] = useState(null);
   const [deleteId, setDeleteId] = useState(null);
+  const [whatsappQuotation, setWhatsappQuotation] = useState(null);
+  const [sendingWhatsapp, setSendingWhatsapp] = useState(false);
 
   /*
    * Manager assignment state
@@ -143,6 +148,7 @@ export default function QuotationsPage() {
           salesRepEmail: q.created_by?.email,
 
           customerId: q.customer_id,
+          customerName: q.customer_name,
 
           inquiryId: q.inquiry_id,
 
@@ -352,24 +358,10 @@ export default function QuotationsPage() {
 
       console.log("Selected manager:", manager);
 
-      /*
-       * REAL BACKEND API
-       *
-       * POST
-       * /quotations/{quotation_id}/submit
-       *
-       * Body:
-       * {
-       *   manager_id: 2
-       * }
-       */
       const response = await submitQuotationApi(quotation.id, manager.id);
 
       console.log("Submit quotation response:", response);
 
-      /*
-       * Update local UI after successful API call.
-       */
       setQuotations((prev) =>
         prev.map((q) =>
           q.id === quotation.id
@@ -430,25 +422,41 @@ export default function QuotationsPage() {
    * DISPATCH
    * ==========================================
    */
-  const dispatch = async (q) => {
+  const dispatch = (q) => {
     if (!q?.id) {
       toast.error("Invalid quotation.");
       return;
     }
 
+    if (q.status !== "approved") {
+      toast.error("Only approved quotations can be dispatched.");
+      return;
+    }
+
+    setWhatsappQuotation(q);
+  };
+
+  const sendQuotationToWhatsapp = async () => {
+    if (!whatsappQuotation?.id) {
+      toast.error("Invalid quotation.");
+      return;
+    }
+
     try {
-      await dispatchQuotationApi(q.id);
+      setSendingWhatsapp(true);
 
-      // Keep existing local UI update
-      updateQuotation(q.id, {
-        status: "dispatched",
-        dispatchedAt: new Date().toISOString(),
-      });
+      const response = await sendQuotationWhatsappApi(whatsappQuotation.id);
 
-      // Update current page state as well
+      console.log("WhatsApp API response:", response);
+
+      if (response?.success === false) {
+        toast.error(response.message || "Failed to send quotation.");
+        return;
+      }
+
       setQuotations((prev) =>
         prev.map((quotation) =>
-          quotation.id === q.id
+          quotation.id === whatsappQuotation.id
             ? {
                 ...quotation,
                 status: "dispatched",
@@ -458,16 +466,22 @@ export default function QuotationsPage() {
         ),
       );
 
-      toast.success("Quotation dispatched to customer!");
+      toast.success(
+        response?.message || "Quotation sent to customer on WhatsApp.",
+      );
+
+      setWhatsappQuotation(null);
     } catch (error) {
-      console.error("Dispatch quotation failed:", error);
+      console.error("WhatsApp quotation failed:", error);
 
       const message =
         error?.response?.data?.detail ||
         error?.response?.data?.message ||
-        "Failed to dispatch quotation.";
+        "Failed to send quotation on WhatsApp.";
 
       toast.error(message);
+    } finally {
+      setSendingWhatsapp(false);
     }
   };
 
@@ -614,20 +628,14 @@ export default function QuotationsPage() {
   const columns = [
     {
       key: "customer",
-
       header: "Customer",
-
       sortable: true,
 
-      render: (q) => {
-        const c = customers.find((x) => x.id === q.customerId);
-
-        return (
-          <span className="font-medium text-slate-700 dark:text-slate-200">
-            {c?.name || "—"}
-          </span>
-        );
-      },
+      render: (q) => (
+        <span className="font-medium text-slate-700 dark:text-slate-200">
+          {q.customerName || "—"}
+        </span>
+      ),
     },
 
     {
@@ -1087,6 +1095,101 @@ export default function QuotationsPage() {
         )}
       </Modal>
 
+      <Modal
+        open={!!whatsappQuotation}
+        onClose={() => {
+          if (!sendingWhatsapp) {
+            setWhatsappQuotation(null);
+          }
+        }}
+        title="Send Quotation"
+        size="sm"
+        footer={
+          <>
+            <Button
+              variant="secondary"
+              disabled={sendingWhatsapp}
+              onClick={() => setWhatsappQuotation(null)}
+            >
+              Cancel
+            </Button>
+
+            <Button
+              variant="success"
+              disabled={sendingWhatsapp}
+              onClick={sendQuotationToWhatsapp}
+            >
+              <MessageCircle size={18} />
+
+              {sendingWhatsapp ? "Sending..." : "Send on WhatsApp"}
+            </Button>
+          </>
+        }
+      >
+        {whatsappQuotation && (
+          <div className="space-y-5">
+            {/* WhatsApp icon */}
+            <div className="flex justify-center">
+              <div className="flex h-16 w-16 items-center justify-center rounded-full bg-emerald-100">
+                <MessageCircle size={34} className="text-emerald-600" />
+              </div>
+            </div>
+
+            <div className="text-center">
+              <h3 className="text-lg font-semibold text-slate-900">
+                Send quotation to customer?
+              </h3>
+
+              <p className="mt-1 text-sm text-slate-500">
+                The quotation PDF will be sent to the customer's WhatsApp.
+              </p>
+            </div>
+
+            {/* Quotation information */}
+            <div className="rounded-xl border border-slate-200 bg-slate-50 p-4">
+              <div className="flex items-center justify-between">
+                <span className="text-sm text-slate-500">Quotation</span>
+
+                <span className="font-semibold text-slate-900">
+                  {whatsappQuotation.quotationNumber ||
+                    `#${whatsappQuotation.id}`}
+                </span>
+              </div>
+
+              <div className="mt-3 flex items-center justify-between">
+                <span className="text-sm text-slate-500">Customer</span>
+
+                <span className="font-semibold text-slate-900">
+                  {whatsappQuotation.customerName || "Customer"}
+                </span>
+              </div>
+
+              <div className="mt-3 flex items-center justify-between">
+                <span className="text-sm text-slate-500">Amount</span>
+
+                <span className="font-semibold text-slate-900">
+                  {formatINR(whatsappQuotation.grandTotal)}
+                </span>
+              </div>
+            </div>
+
+            <div className="rounded-lg border border-emerald-200 bg-emerald-50 p-3">
+              <div className="flex gap-2">
+                <MessageCircle
+                  size={18}
+                  className="mt-0.5 shrink-0 text-emerald-600"
+                />
+
+                <p className="text-sm text-emerald-800">
+                  Click <strong>Send on WhatsApp</strong> to send this approved
+                  quotation to the selected customer.
+                </p>
+              </div>
+            </div>
+          </div>
+        )}
+      </Modal>
+
       {/* =====================================
           DELETE
           ===================================== */}
@@ -1110,8 +1213,6 @@ export default function QuotationsPage() {
  */
 
 function QuotationDetail({ q, customers, inquiries, user }) {
-  const cust = customers.find((c) => c.id === q.customerId);
-
   const inq = inquiries.find((i) => i.id === q.inquiryId);
 
   return (
@@ -1119,8 +1220,7 @@ function QuotationDetail({ q, customers, inquiries, user }) {
       <div className="grid grid-cols-2 gap-4">
         <div>
           <p className="text-xs text-slate-400">Customer</p>
-
-          <p className="font-semibold">{cust?.name}</p>
+          <p className="font-semibold">{q.customerName || "—"}</p>{" "}
         </div>
 
         <div>

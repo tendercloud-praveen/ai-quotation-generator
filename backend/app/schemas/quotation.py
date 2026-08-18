@@ -22,6 +22,7 @@ class QuotationSummary(BaseModel):
 
 class QuotationCreate(BaseModel):
     user_id: int
+    customer_id: int
     company_id: int
     inquiry_text: str
     summary: QuotationSummary
