@@ -12,12 +12,13 @@ from sqlalchemy.orm import Session
 
 from app.database.database import get_db
 from app.utils.auth import get_current_user
+
 from app.models.user import User
 from app.models.product import Product
 
 from app.ai.ocr import process_input
 from app.ai.product_search import search_product_by_embedding
-from app.ai.inquiry_parser import extract_quantity
+from app.ai.inquiry_parser import extract_items
 from app.ai.quotation_calculator import calculate_quotation
 
 
@@ -35,73 +36,188 @@ async def extract_text(
     db: Session = Depends(get_db)
 ):
 
-    # 1. Check input
+    # ---------------------------------------------------------
+    # 1. Validate input
+    # ---------------------------------------------------------
+
     if not text and not file:
         return {
             "status": "failed",
             "message": "Please enter text or upload a file."
         }
 
-    # 2. Extract text and generate embedding
+    # ---------------------------------------------------------
+    # 2. Extract text + generate embedding
+    # ---------------------------------------------------------
+
     result = await process_input(
         text=text,
         file=file
     )
 
-    # 3. Extract quantity from user query
-    quantity = extract_quantity(
-        result["text"]
+    inquiry_text = result["text"]
+    extracted_items = extract_items(
+    inquiry_text
+)
+
+    if not inquiry_text:
+        return {
+            "status": "failed",
+            "message": "Unable to extract text from the input."
+        }
+
+    # ---------------------------------------------------------
+    # 3. Extract multiple items
+    # ---------------------------------------------------------
+
+    extracted_items = extract_items(
+        inquiry_text
     )
 
-    # 4. Search products using Qdrant
-    search_result = search_product_by_embedding(
-        query_embedding=result["embedding"],
-        db=db,
-        Product=Product,
-        top_k=1,
-        score_threshold=0.75
-    )
+    if not extracted_items:
+        return {
+            "status": "failed",
+            "message": "Unable to identify products and quantities.",
+            "extracted_text": inquiry_text
+        }
 
-    similar_products = search_result["similar_products"]
-    products = search_result["products"]
+    # ---------------------------------------------------------
+    # 4. Search each product separately
+    # ---------------------------------------------------------
 
-    # 5. Calculate quotation
-    quotation = calculate_quotation(
-        products,
-        quantity
-    )
+    matched_products = []
+    quotation_items = []
 
-    # 6. Return response
-    return {
-    "status": "success",
+    total_subtotal = 0
+    total_gst = 0
+    grand_total = 0
 
-    "user_id": current_user.id,
-    "email": current_user.email,
+    for item in extracted_items:
 
-    "inquiry": {
-        "input_type": "text" if text else "file",
-        "query": result["text"],
-        "quantity": quantity
-    },
+        product_name = item["product_name"]
+        quantity = item["quantity"]
 
-    "match_result": {
-        # AI confidence
-        
+        # -----------------------------------------------------
+        # Generate embedding for individual product
+        # -----------------------------------------------------
 
-        "message": search_result["message"],
+        product_embedding_result = await process_input(
+            text=product_name,
+            file=None
+        )
 
-        # Qdrant matching
-        "similar_products": [
-            {
-                "product_id": product.payload.get("product_id"),
-                "score": product.score
-            }
-            for product in similar_products
-        ],
+        # -----------------------------------------------------
+        # Search product in Qdrant
+        # -----------------------------------------------------
 
-        # Matched PostgreSQL products
-        "products": [
-            {
+        search_result = search_product_by_embedding(
+            query_embedding=product_embedding_result["embedding"],
+            db=db,
+            Product=Product,
+            company_id=current_user.company_id,
+            top_k=3,
+            score_threshold=0.75
+        )
+
+        similar_products = search_result.get(
+            "similar_products",
+            []
+        )
+
+        products = search_result.get(
+            "products",
+            []
+        )
+
+        # -----------------------------------------------------
+        # Product not found
+        # -----------------------------------------------------
+
+        if not products:
+
+            matched_products.append({
+                "requested_product": product_name,
+                "quantity": quantity,
+                "matched": False,
+                "message": search_result.get(
+                    "message",
+                    "Product not found."
+                ),
+                "similar_products": [
+                    {
+                        "product_id": product.payload.get("product_id"),
+                        "score": product.score
+                    }
+                    for product in similar_products
+                ]
+            })
+
+            continue
+
+        # -----------------------------------------------------
+        # Take best matched PostgreSQL product
+        # -----------------------------------------------------
+
+        product = products[0]
+
+        # -----------------------------------------------------
+        # Calculate quotation for this product
+        # -----------------------------------------------------
+
+        quotation = calculate_quotation(
+            [product],
+            quantity
+        )
+
+        quotation_product_items = quotation.get(
+            "quotation_items",
+            []
+        )
+
+        quotation_items.extend(
+            quotation_product_items
+        )
+
+        # -----------------------------------------------------
+        # Add totals
+        # -----------------------------------------------------
+
+        total_subtotal += quotation.get(
+            "subtotal",
+            0
+        )
+
+        total_gst += quotation.get(
+            "total_gst",
+            0
+        )
+
+        grand_total += quotation.get(
+            "grand_total",
+            0
+        )
+
+        # -----------------------------------------------------
+        # Add matched product information
+        # -----------------------------------------------------
+
+        matched_products.append({
+            "requested_product": product_name,
+            "quantity": quantity,
+
+            "matched": True,
+
+            "similar_products": [
+                {
+                    "product_id": similar_product.payload.get(
+                        "product_id"
+                    ),
+                    "score": similar_product.score
+                }
+                for similar_product in similar_products
+            ],
+
+            "product": {
                 "product_id": product.id,
                 "product_name": product.product_name,
                 "category": product.category,
@@ -110,18 +226,35 @@ async def extract_text(
                 "gst_percentage": product.gst_percentage,
                 "unit": product.unit
             }
-            for product in products
-        ],
+        })
 
-        # Quotation items
-        "items": quotation["quotation_items"],
+    # ---------------------------------------------------------
+    # 5. Final response
+    # ---------------------------------------------------------
 
-        # Quotation summary
-        "summary": {
-            "subtotal": quotation["subtotal"],
-            "gst_percentage": 18,
-            "total_gst": quotation["total_gst"],
-            "grand_total": quotation["grand_total"]
+    return {
+        "status": "success",
+
+        "user_id": current_user.id,
+        "email": current_user.email,
+
+        "inquiry": {
+            "input_type": "text" if text else "file",
+            "query": inquiry_text
+        },
+
+        "items_requested": extracted_items,
+
+        "match_result": {
+
+            "products": matched_products,
+
+            "items": quotation_items,
+
+            "summary": {
+                "subtotal": round(total_subtotal, 2),
+                "total_gst": round(total_gst, 2),
+                "grand_total": round(grand_total, 2)
+            }
         }
     }
-}

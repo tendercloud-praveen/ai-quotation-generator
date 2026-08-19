@@ -27,6 +27,7 @@ def create_product_embedding(product):
 
     # Store embedding in Qdrant
     store_product_embedding(
+        product.company_id,
         product.id,
         embedding,
         search_text
@@ -35,6 +36,7 @@ def create_product_embedding(product):
     print("Vector stored in Qdrant")
 
     return {
+        "company_id": product.company_id,
         "product_id": product.id,
         "search_text": search_text
     }
