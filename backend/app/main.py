@@ -28,6 +28,7 @@ from app.api.quotation_status_router import router as quotation_status_router
 from app.api.quotation_revenue_trend import router as dashboard_router
 from app.api.quotation_revenue_trend_salesperson import router as dashboard_salesperson_router
 from app.api.quotation_revenue_trend_manager import router as manager_quotation_revenue_trend_router
+from app.api.product_router import router as product_bulk_router
    
 
 from app.api.whatsapp import router as whatsapp_router
@@ -60,4 +61,5 @@ app.include_router(dashboard_router)
 app.include_router(dashboard_salesperson_router)
 app.include_router(manager_quotation_revenue_trend_router)
 app.include_router(whatsapp_router)
+app.include_router(product_bulk_router)
 Base.metadata.create_all(bind=engine)

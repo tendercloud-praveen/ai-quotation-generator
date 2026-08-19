@@ -10,6 +10,7 @@ import os
 import io
 
 from app.ai.embedding import generate_embedding
+from app.models.product import Product
 
 
 # ==========================================
@@ -42,7 +43,8 @@ def preprocess_text(text: str) -> str:
 
 async def process_input(
     text: Optional[str] = None,
-    file: Optional[UploadFile] = None
+    file: Optional[UploadFile] = None,
+
 ):
 
     # --------------------------------------

@@ -8,47 +8,43 @@ def extract_items(text: str):
 
     text = text.lower().strip()
 
-    # ---------------------------------------------------------
-    # Remove starting phrases
-    # ---------------------------------------------------------
+    # =========================================================
+    # 1. REMOVE COMMON STARTING PHRASES
+    # =========================================================
 
     text = re.sub(
         r"customer\s+product\s+inquiry",
         "",
-        text
+        text,
+        flags=re.IGNORECASE
     )
 
     text = re.sub(
         r"please\s+provide\s+the\s+following\s+products?\s*:?",
         "",
-        text
+        text,
+        flags=re.IGNORECASE
     )
 
     text = re.sub(
         r"^(i\s+)?(need|want|require|i would like)\s+",
         "",
-        text
+        text,
+        flags=re.IGNORECASE
     )
 
-    # ---------------------------------------------------------
-    # NEW:
-    # Handle PDF/table format
-    #
-    # Example:
+    text = text.strip()
+
+    # =========================================================
+    # 2. HANDLE TABLE FORMAT
     #
     # Product Quantity Unit Requirement
-    # HP ProBook 450 G10 Laptop 200 Nos Business laptops...
+    # HP 235 Mouse 200 Nos
+    # Dell Keyboard 100 Nos
     #
-    # Dell Latitude 5440 Laptop 100 Nos Business laptops...
-    #
-    # IMPORTANT:
-    # We extract the product + quantity + Nos first,
-    # BEFORE adding commas before numbers.
-    # ---------------------------------------------------------
+    # This part looks for quantity followed by a unit.
+    # =========================================================
 
-    table_items = []
-
-    # Remove table headers
     text = re.sub(
         r"\bproduct\s+quantity\s+unit\s+requirement\b",
         "",
@@ -56,27 +52,21 @@ def extract_items(text: str):
         flags=re.IGNORECASE
     )
 
-    # ---------------------------------------------------------
-    # Known product starting words for the PDF/table format
+    # =========================================================
+    # 3. PRODUCT + QUANTITY + UNIT
     #
-    # This prevents the Requirement text from being included
-    # in the next product.
-    # ---------------------------------------------------------
+    # Example:
+    #
+    # HP 235 Mouse 200 Nos
+    #
+    # Product = HP 235 Mouse
+    # Quantity = 200
+    # =========================================================
 
-    product_starts = (
-        r"(?:hp\s+probook|"
-        r"dell\s+latitude|"
-        r"lenovo\s+thinkpad|"
-        r"dell\s+kb216|"
-        r"logitech\s+k120|"
-        r"logitech\s+m90|"
-        r"dell\s+ms116|"
-        r"dell\s+p2422h|"
-        r"hp\s+laserjet)"
-    )
+    unit_pattern = r"(nos|no|units?|pcs?|pieces?|qty)"
 
     table_pattern = re.compile(
-        rf"({product_starts}.*?\s+\d+\s+(?:nos|no|units?|pcs?))",
+        rf"(.+?)\s+(\d+)\s+{unit_pattern}(?=\s|,|$)",
         re.IGNORECASE
     )
 
@@ -84,134 +74,14 @@ def extract_items(text: str):
 
     if table_matches:
 
+        items = []
+
         for match in table_matches:
 
-            match = match.strip()
+            product_name = match[0].strip()
 
-            # Find quantity immediately before Nos
-            quantity_match = re.search(
-                r"\s+(\d+)\s+(nos|no|units?|pcs?)\s*$",
-                match,
-                re.IGNORECASE
-            )
+            quantity = int(match[1])
 
-            if not quantity_match:
-                continue
-
-            quantity = int(quantity_match.group(1))
-
-            product_name = match[:quantity_match.start()].strip()
-
-            # Remove "and" from beginning/end
-            product_name = re.sub(
-                r"^and\s+",
-                "",
-                product_name,
-                flags=re.IGNORECASE
-            )
-
-            product_name = re.sub(
-                r"\s+and$",
-                "",
-                product_name,
-                flags=re.IGNORECASE
-            )
-
-            if product_name:
-
-                table_items.append({
-                    "product_name": product_name,
-                    "quantity": quantity
-                })
-
-        # If PDF/table products were successfully found,
-        # return them directly.
-        #
-        # This prevents the old number-splitting logic from
-        # changing 450, 5440, KB216, etc.
-        if table_items:
-            return table_items
-
-    # ---------------------------------------------------------
-    # EXISTING LOGIC
-    # ---------------------------------------------------------
-    # Convert "and" before a quantity into a separator
-    # ---------------------------------------------------------
-
-    text = re.sub(
-        r"\s+and\s+(?=\d+\s+)",
-        ", ",
-        text
-    )
-
-    # ---------------------------------------------------------
-    # Remove unnecessary commas
-    # ---------------------------------------------------------
-
-    text = re.sub(
-        r",+",
-        ",",
-        text
-    )
-
-    # ---------------------------------------------------------
-    # EXISTING LOGIC
-    #
-    # Add comma before every new quantity.
-    #
-    # Example:
-    #
-    # 10 hp laptops 12 mouses 3 keyboards
-    #
-    # becomes:
-    #
-    # 10 hp laptops, 12 mouses, 3 keyboards
-    # ---------------------------------------------------------
-
-    text = re.sub(
-        r"\s+(?=\d+\s+)",
-        ", ",
-        text
-    )
-
-    # ---------------------------------------------------------
-    # Split into individual products
-    # ---------------------------------------------------------
-
-    parts = text.split(",")
-
-    items = []
-
-    for part in parts:
-
-        part = part.strip()
-
-        if not part:
-            continue
-
-        # -----------------------------------------------------
-        # EXISTING + NEW LOGIC:
-        #
-        # Product Name + Quantity + Unit
-        #
-        # Example:
-        #
-        # hp laptop 200 nos
-        # -----------------------------------------------------
-
-        match_product_first = re.match(
-            r"^(.+?)\s+(\d+)\s+(nos|no|units?|pcs?)\s*$",
-            part,
-            re.IGNORECASE
-        )
-
-        if match_product_first:
-
-            product_name = match_product_first.group(1).strip()
-
-            quantity = int(match_product_first.group(2))
-
-            # Remove "and" from beginning/end
             product_name = re.sub(
                 r"^and\s+",
                 "",
@@ -233,51 +103,122 @@ def extract_items(text: str):
                     "quantity": quantity
                 })
 
-            continue
+        if items:
+            return items
 
-        # -----------------------------------------------------
-        # YOUR ORIGINAL LOGIC
-        #
-        # Quantity + Product Name
-        #
-        # Example:
-        #
-        # 10 hp laptops
-        # -----------------------------------------------------
+    # =========================================================
+    # 4. QUANTITY FIRST
+    #
+    # VERY IMPORTANT
+    #
+    # 2 HP 235 Slim Wireless Mouse
+    #
+    # First number = quantity
+    #
+    # 235 = part of product name
+    #
+    # So:
+    #
+    # quantity = 2
+    # product = HP 235 Slim Wireless Mouse
+    # =========================================================
 
-        match = re.match(
-            r"^(\d+)\s+(.+?)\s*$",
-            part
+    first_quantity = re.match(
+        r"^(\d+)\s+(.+)$",
+        text
+    )
+
+    if first_quantity:
+
+        quantity = int(
+            first_quantity.group(1)
         )
 
-        if not match:
-            continue
-
-        quantity = int(match.group(1))
-
-        product_name = match.group(2).strip()
-
-        # -----------------------------------------------------
-        # Remove "and" from beginning/end
-        # -----------------------------------------------------
-
-        product_name = re.sub(
-            r"^and\s+",
-            "",
-            product_name
-        )
-
-        product_name = re.sub(
-            r"\s+and$",
-            "",
-            product_name
-        )
+        product_name = first_quantity.group(2).strip()
 
         if product_name:
 
-            items.append({
+            return [{
                 "product_name": product_name,
                 "quantity": quantity
-            })
+            }]
+
+    # =========================================================
+    # 5. MULTIPLE PRODUCTS WITH COMMA
+    #
+    # Example:
+    #
+    # 2 HP 235 Mouse,
+    # 5 Dell KB216 Keyboard,
+    # 3 Logitech M90 Mouse
+    # =========================================================
+
+    text = re.sub(
+        r"\s*,\s*",
+        ",",
+        text
+    )
+
+    parts = text.split(",")
+
+    items = []
+
+    for part in parts:
+
+        part = part.strip()
+
+        if not part:
+            continue
+
+        # -----------------------------------------------------
+        # Quantity first
+        # -----------------------------------------------------
+
+        match = re.match(
+            r"^(\d+)\s+(.+)$",
+            part
+        )
+
+        if match:
+
+            quantity = int(
+                match.group(1)
+            )
+
+            product_name = match.group(2).strip()
+
+            if product_name:
+
+                items.append({
+                    "product_name": product_name,
+                    "quantity": quantity
+                })
+
+            continue
+
+        # -----------------------------------------------------
+        # Product first + quantity + unit
+        # -----------------------------------------------------
+
+        match = re.match(
+            rf"^(.+?)\s+(\d+)\s+{unit_pattern}$",
+            part,
+            re.IGNORECASE
+        )
+
+        if match:
+
+            product_name = match.group(1).strip()
+
+            quantity = int(
+                match.group(2)
+            )
+
+            if product_name:
+
+                items.append({
+                    "product_name": product_name,
+                    "quantity": quantity
+                })
 
     return items
