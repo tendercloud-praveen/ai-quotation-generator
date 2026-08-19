@@ -5,6 +5,7 @@ def search_product_by_embedding(
     query_embedding,
     db,
     Product,
+    company_id,
     top_k=3,
     score_threshold=0.75
 ):
@@ -12,6 +13,7 @@ def search_product_by_embedding(
     # Search Qdrant
     similar_products = search_products(
         query_embedding,
+        company_id=company_id,
         top_k=top_k
     )
 

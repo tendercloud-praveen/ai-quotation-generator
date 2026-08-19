@@ -1,7 +1,14 @@
 import os
 
 from qdrant_client import QdrantClient
-from qdrant_client.models import Distance, VectorParams, PointStruct
+from qdrant_client.models import (
+    Distance,
+    VectorParams,
+    PointStruct,
+    Filter,
+    FieldCondition,
+    MatchValue
+)
 
 
 QDRANT_URL = os.getenv("QDRANT_URL", "http://localhost:6333")
@@ -33,7 +40,12 @@ def create_collection():
         )
 
 
-def store_product_embedding(product_id, embedding, search_text):
+def store_product_embedding(
+    company_id,
+    product_id,
+    embedding,
+    search_text
+):
 
     client.upsert(
         collection_name=COLLECTION_NAME,
@@ -42,6 +54,7 @@ def store_product_embedding(product_id, embedding, search_text):
                 id=product_id,
                 vector=embedding,
                 payload={
+                    "company_id": company_id,
                     "product_id": product_id,
                     "text": search_text
                 }
@@ -50,11 +63,25 @@ def store_product_embedding(product_id, embedding, search_text):
     )
 
 
-def search_products(query_embedding, top_k=1):
+def search_products(
+    query_embedding,
+    company_id,
+    top_k=1
+):
+
+    company_filter = Filter(
+        must=[
+            FieldCondition(
+                key="company_id",
+                match=MatchValue(value=company_id)
+            )
+        ]
+    )
 
     results = client.query_points(
         collection_name=COLLECTION_NAME,
         query=query_embedding,
+        query_filter=company_filter,
         limit=top_k,
         with_payload=True
     )
