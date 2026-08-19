@@ -47,7 +47,13 @@ async def extract_text(
         }
 
     # ---------------------------------------------------------
-    # 2. Extract text + generate embedding
+    # 2. Extract text
+    #
+    # If text is provided:
+    #     process_input() uses the text directly.
+    #
+    # If file is provided:
+    #     process_input() performs OCR and returns the text.
     # ---------------------------------------------------------
 
     result = await process_input(
@@ -56,9 +62,6 @@ async def extract_text(
     )
 
     inquiry_text = result["text"]
-    extracted_items = extract_items(
-    inquiry_text
-)
 
     if not inquiry_text:
         return {
@@ -67,12 +70,10 @@ async def extract_text(
         }
 
     # ---------------------------------------------------------
-    # 3. Extract multiple items
+    # 3. Extract products + quantities
     # ---------------------------------------------------------
 
-    extracted_items = extract_items(
-        inquiry_text
-    )
+    extracted_items = extract_items(inquiry_text)
 
     if not extracted_items:
         return {
@@ -204,7 +205,6 @@ async def extract_text(
         matched_products.append({
             "requested_product": product_name,
             "quantity": quantity,
-
             "matched": True,
 
             "similar_products": [
@@ -246,7 +246,6 @@ async def extract_text(
         "items_requested": extracted_items,
 
         "match_result": {
-
             "products": matched_products,
 
             "items": quotation_items,
