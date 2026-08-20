@@ -476,48 +476,43 @@ def get_quotation_for_download(
         ]
     ]
 
-    # TO = COMPANY + MANAGER
-    to_data = [
-        [
-            Paragraph(
-                "<b>To:</b>",
-                bold_style
-            )
-        ],
-        [
-            Paragraph(
-                safe_value(company_name),
-                normal_style
-            )
-        ],
-        [
-            Paragraph(
-                safe_value(manager_name),
-                normal_style
-            )
-        ],
-        [
-            Paragraph(
-                safe_value(
-                    company_email
-                    if company_email != "---"
-                    else manager_email
-                ),
-                normal_style
-            )
-        ],
-        [
-            Paragraph(
-                safe_value(
-                    company_phone
-                    if company_phone != "---"
-                    else manager_phone
-                ),
-                normal_style
-            )
-        ]
-    ]
+    customer = quotation.customer
 
+    # TO = COMPANY + CUSTOMER
+    to_data = [
+    [
+        Paragraph(
+            "<b>To:</b>",
+            bold_style
+        )
+    ],
+    
+    [
+        Paragraph(
+            safe_value(
+                getattr(customer, "contact_person", None)
+            ),
+            normal_style
+        )
+    ],
+    [
+        Paragraph(
+            safe_value(
+                getattr(customer, "email", None)
+            ),
+            normal_style
+        )
+    ],
+    [
+        Paragraph(
+            safe_value(
+                getattr(customer, "mobile", None)
+            ),
+            normal_style
+        )
+    ]
+]
+         
     from_table = Table(
         from_data,
         colWidths=85 * mm

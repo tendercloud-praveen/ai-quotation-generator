@@ -7,7 +7,7 @@ def search_product_by_embedding(
     Product,
     company_id,
     top_k=3,
-    score_threshold=0.85
+    score_threshold=0.75
 ):
     """
     Search products using Qdrant embeddings.
@@ -56,7 +56,7 @@ def search_product_by_embedding(
         return {
             "found": False,
             "message": "No matching products found.",
-            "similar_products": [],
+            "similar_products": similar_products,
             "products": []
         }
 
