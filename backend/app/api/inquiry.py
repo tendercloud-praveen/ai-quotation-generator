@@ -117,7 +117,7 @@ async def extract_text(
             Product=Product,
             company_id=current_user.company_id,
             top_k=3,
-            score_threshold=0.85
+            score_threshold=0.75
         )
 
         similar_products = search_result.get(
@@ -135,25 +135,37 @@ async def extract_text(
         # -----------------------------------------------------
 
         if not products:
-
             matched_products.append({
-                "requested_product": product_name,
-                "quantity": quantity,
-                "matched": False,
-                "message": search_result.get(
-                    "message",
-                    "Product not found."
-                ),
-                "similar_products": [
-                    {
-                        "product_id": product.payload.get("product_id"),
-                        "score": product.score
-                    }
-                    for product in similar_products
-                ]
-            })
-
+                    "requested_product": product_name,
+                    "quantity": quantity,
+                    "matched": False,
+            
+                    "confidence_score": (
+                        similar_products[0].score
+                        if similar_products
+                        else 0
+                    ),
+            
+                    "message": search_result.get(
+                        "message",
+                        "Product not found."
+                    ),
+            
+                    "similar_products": [
+                        {
+                            "product_id": similar_product.payload.get(
+                                "product_id"
+                            ),
+                            "score": similar_product.score
+                        }
+                        for similar_product in similar_products
+                    ]
+                })
             continue
+            
+
+
+    
 
         # -----------------------------------------------------
         # Take best matched PostgreSQL product
@@ -206,6 +218,7 @@ async def extract_text(
             "requested_product": product_name,
             "quantity": quantity,
             "matched": True,
+            "confidence_score": similar_products[0].score if similar_products else 0,
 
             "similar_products": [
                 {
@@ -240,7 +253,8 @@ async def extract_text(
 
         "inquiry": {
             "input_type": "text" if text else "file",
-            "query": inquiry_text
+            "query": inquiry_text,
+            
         },
 
         "items_requested": extracted_items,
