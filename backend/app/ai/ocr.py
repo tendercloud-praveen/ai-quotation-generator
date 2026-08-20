@@ -30,9 +30,15 @@ def preprocess_text(text: str) -> str:
 
     text = text.strip()
 
-    text = " ".join(text.split())
+    lines = [
+        " ".join(line.split())
+        for line in text.splitlines()
+        if line.strip()
+    ]
 
-    print(f"Preprocessed text: {text}")
+    text = "\n".join(lines)
+
+    print(f"Preprocessed text:\n{text}")
 
     return text
 
