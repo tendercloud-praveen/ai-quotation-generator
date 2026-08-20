@@ -1,5 +1,14 @@
 import { useEffect, useMemo, useState } from "react";
-import { Package, Plus, Pencil, Eye } from "lucide-react";
+import {
+  Package,
+  Plus,
+  Pencil,
+  Eye,
+  Trash2,
+  Upload,
+  FileText,
+  CheckCircle2,
+} from "lucide-react";
 import PageHeader from "../../components/PageHeader";
 import Breadcrumbs from "../../components/Breadcrumbs";
 import { Card } from "../../components/Card";
@@ -18,6 +27,8 @@ import {
   createProductApi,
   getProductsApi,
   getProductApi,
+  bulkUploadProductsApi,
+  deleteProductApi,
 } from "../../services/productService";
 
 import SearchBar from "../../components/SearchBar";
@@ -64,6 +75,9 @@ export default function ProductsPage() {
 
   const canManage = effectiveRole === "admin";
 
+  const canViewMargin =
+    effectiveRole === "admin" || effectiveRole === "manager";
+
   /* =======================================================
      STATE
   ======================================================= */
@@ -85,6 +99,7 @@ export default function ProductsPage() {
   const [viewModalOpen, setViewModalOpen] = useState(false);
   const [viewingProduct, setViewingProduct] = useState(null);
   const [viewLoading, setViewLoading] = useState(false);
+  const [bulkFile, setBulkFile] = useState(null);
 
   /* =======================================================
      GET ALL PRODUCTS
@@ -141,6 +156,28 @@ export default function ProductsPage() {
       console.error("Backend response:", error.response?.data);
 
       toast.error(error.response?.data?.detail || "Failed to load products.");
+    }
+  };
+
+  const handleBulkUpload = async () => {
+    if (!bulkFile) {
+      toast.error("Please select a file.");
+      return;
+    }
+
+    try {
+      await bulkUploadProductsApi(bulkFile);
+
+      toast.success("Products uploaded successfully.");
+
+      setBulkFile(null);
+
+      await fetchProducts();
+    } catch (error) {
+      console.error("Bulk upload error:", error);
+      console.error("Backend response:", error.response?.data);
+
+      toast.error(error.response?.data?.detail || "Failed to upload products.");
     }
   };
 
@@ -251,6 +288,17 @@ export default function ProductsPage() {
       toast.error(
         error.response?.data?.detail || "Failed to load product details.",
       );
+    }
+  };
+
+  const handleDeleteProduct = async (productId) => {
+    try {
+      await deleteProductApi(productId);
+
+      // Refresh products
+      await fetchProducts();
+    } catch (error) {
+      console.error("Delete product error:", error);
     }
   };
 
@@ -556,32 +604,37 @@ export default function ProductsPage() {
       ),
     },
 
-    {
-      key: "margin",
+    ...(canViewMargin
+      ? [
+          {
+            key: "margin",
+            header: "Margin",
 
-      header: "Margin",
+            render: (p) => {
+              const margin = p.sellingPrice - p.costPrice;
 
-      render: (p) => {
-        const margin = p.sellingPrice - p.costPrice;
+              const percentage =
+                p.sellingPrice > 0
+                  ? ((margin / p.sellingPrice) * 100).toFixed(0)
+                  : 0;
 
-        const percentage =
-          p.sellingPrice > 0 ? ((margin / p.sellingPrice) * 100).toFixed(0) : 0;
-
-        return (
-          <Badge
-            tone={
-              Number(percentage) >= 30
-                ? "success"
-                : Number(percentage) >= 15
-                  ? "warning"
-                  : "danger"
-            }
-          >
-            {formatINR(margin)} ({percentage}%)
-          </Badge>
-        );
-      },
-    },
+              return (
+                <Badge
+                  tone={
+                    Number(percentage) >= 30
+                      ? "success"
+                      : Number(percentage) >= 15
+                        ? "warning"
+                        : "danger"
+                  }
+                >
+                  {formatINR(margin)} ({percentage}%)
+                </Badge>
+              );
+            },
+          },
+        ]
+      : []),
 
     /* =====================================================
        ACTIONS
@@ -596,17 +649,34 @@ export default function ProductsPage() {
       header: "Actions",
       render: (p) =>
         canManage ? (
-          // ADMIN → EDIT ONLY
-          <button
-            type="button"
-            onClick={() => openEdit(p)}
-            className="p-2 text-slate-400 hover:text-brand-600 transition"
-            title="Edit Product"
-          >
-            <Pencil size={19} />
-          </button>
+          <div className="flex items-center gap-1">
+            {/* Edit */}
+            <button
+              type="button"
+              onClick={() => openEdit(p)}
+              className="p-2 text-slate-400 hover:text-brand-600 transition"
+              title="Edit Product"
+            >
+              <Pencil size={19} />
+            </button>
+
+            {/* Delete */}
+            <button
+              type="button"
+              onClick={() => {
+                if (
+                  window.confirm(`Are you sure you want to delete "${p.name}"?`)
+                ) {
+                  handleDeleteProduct(p.id);
+                }
+              }}
+              className="p-2 text-slate-400 hover:text-red-600 transition"
+              title="Delete Product"
+            >
+              <Trash2 size={19} />
+            </button>
+          </div>
         ) : (
-          // MANAGER / SALES → VIEW ONLY
           <button
             type="button"
             onClick={() => openView(p)}
@@ -658,10 +728,58 @@ export default function ProductsPage() {
         subtitle="Manage your product catalog with pricing and margins."
         actions={
           canManage ? (
-            <Button onClick={openAdd}>
-              <Plus size={16} />
-              Add Product
-            </Button>
+            <div className="flex items-center gap-2">
+              {/* File Upload */}
+              <label
+                className={`group flex items-center gap-2 px-4 py-2.5 rounded-xl
+          border cursor-pointer transition-all duration-200
+          ${
+            bulkFile
+              ? "border-brand-200 bg-brand-50 text-brand-700"
+              : "border-slate-200 bg-white text-slate-600 hover:border-brand-300 hover:bg-slate-50"
+          }`}
+              >
+                {bulkFile ? (
+                  <CheckCircle2 size={17} className="text-green-600" />
+                ) : (
+                  <FileText
+                    size={17}
+                    className="text-slate-500 group-hover:text-brand-600"
+                  />
+                )}
+
+                <div className="flex flex-col text-left">
+                  <span className="text-sm font-medium">
+                    {bulkFile ? bulkFile.name : "Choose Product File"}
+                  </span>
+
+                  {!bulkFile && (
+                    <span className="text-[11px] text-slate-400">
+                      PDF, DOCX, JPG, PNG
+                    </span>
+                  )}
+                </div>
+
+                <input
+                  type="file"
+                  accept=".pdf,.docx,.jpg,.jpeg,.png,.bmp,.tiff,.webp"
+                  className="hidden"
+                  onChange={(e) => setBulkFile(e.target.files?.[0] || null)}
+                />
+              </label>
+
+              {/* Bulk Upload */}
+              <Button onClick={handleBulkUpload} disabled={!bulkFile}>
+                <Upload size={16} />
+                Bulk Upload
+              </Button>
+
+              {/* Add Product */}
+              <Button onClick={openAdd}>
+                <Plus size={16} />
+                Add Product
+              </Button>
+            </div>
           ) : undefined
         }
       />
@@ -979,7 +1097,7 @@ export default function ProductsPage() {
               </p>
             </div>
 
-            <div>
+            {/* <div>
               <p className="text-xs text-slate-500 mb-1">Margin</p>
 
               {(() => {
@@ -1012,7 +1130,7 @@ export default function ProductsPage() {
                   </Badge>
                 );
               })()}
-            </div>
+            </div> */}
 
             <div className="sm:col-span-2">
               <p className="text-xs text-slate-500 mb-1">Description</p>
