@@ -1,283 +1,180 @@
-import re
+import os
+import json
+
+from dotenv import load_dotenv
+from langchain_groq import ChatGroq
 
 
-def extract_items(text: str):
+# =========================================================
+# LOAD ENVIRONMENT VARIABLES
+# =========================================================
 
-    if not text:
+load_dotenv()
+
+
+# =========================================================
+# GROQ LLM
+# =========================================================
+
+llm = ChatGroq(
+    model="openai/gpt-oss-20b",
+    temperature=0,
+    api_key=os.getenv("GROQ_API_KEY")
+)
+
+
+# =========================================================
+# EXTRACT PRODUCTS FROM CUSTOMER TEXT USING AI
+# =========================================================
+
+async def extract_items_with_ai(text: str):
+
+    if not text or not text.strip():
         return []
 
-    text = text.lower().strip()
+    prompt = f"""
+You are a product and quantity extraction system.
 
-    # ---------------------------------------------------------
-    # Remove starting phrases
-    # ---------------------------------------------------------
+Extract every requested product and its quantity.
 
-    text = re.sub(
-        r"customer\s+product\s+inquiry",
-        "",
-        text
-    )
+IMPORTANT RULES:
 
-    text = re.sub(
-        r"please\s+provide\s+the\s+following\s+products?\s*:?",
-        "",
-        text
-    )
+1. The number before a product is its quantity.
+2. Always extract an item when the input contains a number followed by a product.
+3. Correct obvious spelling mistakes.
+4. Multiple numbers usually mean multiple products.
+5. Do not explain anything.
+6. Do not return markdown.
+7. Return ONLY valid JSON.
 
-    text = re.sub(
-        r"^(i\s+)?(need|want|require|i would like)\s+",
-        "",
-        text
-    )
+Examples:
 
-    # ---------------------------------------------------------
-    # NEW:
-    # Handle PDF/table format
-    #
-    # Example:
-    #
-    # Product Quantity Unit Requirement
-    # HP ProBook 450 G10 Laptop 200 Nos Business laptops...
-    #
-    # Dell Latitude 5440 Laptop 100 Nos Business laptops...
-    #
-    # IMPORTANT:
-    # We extract the product + quantity + Nos first,
-    # BEFORE adding commas before numbers.
-    # ---------------------------------------------------------
+Input:
+12 dell laptops
 
-    table_items = []
+Output:
+{{
+    "items": [
+        {{
+            "product_name": "Dell laptops",
+            "quantity": 12
+        }}
+    ]
+}}
 
-    # Remove table headers
-    text = re.sub(
-        r"\bproduct\s+quantity\s+unit\s+requirement\b",
-        "",
-        text,
-        flags=re.IGNORECASE
-    )
+Input:
+12 laptops 23 mkuses nad 34 keybords
 
-    # ---------------------------------------------------------
-    # Known product starting words for the PDF/table format
-    #
-    # This prevents the Requirement text from being included
-    # in the next product.
-    # ---------------------------------------------------------
+Output:
+{{
+    "items": [
+        {{
+            "product_name": "laptops",
+            "quantity": 12
+        }},
+        {{
+            "product_name": "mice",
+            "quantity": 23
+        }},
+        {{
+            "product_name": "keyboards",
+            "quantity": 34
+        }}
+    ]
+}}
 
-    product_starts = (
-        r"(?:hp\s+probook|"
-        r"dell\s+latitude|"
-        r"lenovo\s+thinkpad|"
-        r"dell\s+kb216|"
-        r"logitech\s+k120|"
-        r"logitech\s+m90|"
-        r"dell\s+ms116|"
-        r"dell\s+p2422h|"
-        r"hp\s+laserjet)"
-    )
+Input:
+120 dell laptops ,34 hp laptks 34 mouse snad 3 keybords
 
-    table_pattern = re.compile(
-        rf"({product_starts}.*?\s+\d+\s+(?:nos|no|units?|pcs?))",
-        re.IGNORECASE
-    )
+Output:
+{{
+    "items": [
+        {{
+            "product_name": "Dell laptops",
+            "quantity": 120
+        }},
+        {{
+            "product_name": "HP laptops",
+            "quantity": 34
+        }},
+        {{
+            "product_name": "mouse",
+            "quantity": 34
+        }},
+        {{
+            "product_name": "keyboards",
+            "quantity": 3
+        }}
+    ]
+}}
 
-    table_matches = table_pattern.findall(text)
+Input:
+10 hp laptops and 20 dell keyboards and 5 logitech mouse
 
-    if table_matches:
+Output:
+{{
+    "items": [
+        {{
+            "product_name": "HP laptops",
+            "quantity": 10
+        }},
+        {{
+            "product_name": "Dell keyboards",
+            "quantity": 20
+        }},
+        {{
+            "product_name": "Logitech mouse",
+            "quantity": 5
+        }}
+    ]
+}}
 
-        for match in table_matches:
+Now process this input:
 
-            match = match.strip()
+{text}
 
-            # Find quantity immediately before Nos
-            quantity_match = re.search(
-                r"\s+(\d+)\s+(nos|no|units?|pcs?)\s*$",
-                match,
-                re.IGNORECASE
-            )
+Return ONLY this JSON structure:
 
-            if not quantity_match:
-                continue
+{{
+    "items": [
+        {{
+            "product_name": "product name",
+            "quantity": 0
+        }}
+    ]
+}}
+"""
 
-            quantity = int(quantity_match.group(1))
+    try:
 
-            product_name = match[:quantity_match.start()].strip()
+        response = await llm.ainvoke(prompt)
 
-            # Remove "and" from beginning/end
-            product_name = re.sub(
-                r"^and\s+",
-                "",
-                product_name,
-                flags=re.IGNORECASE
-            )
+        result = response.content.strip()
 
-            product_name = re.sub(
-                r"\s+and$",
-                "",
-                product_name,
-                flags=re.IGNORECASE
-            )
+        print("\n========== GROQ RAW RESPONSE ==========")
+        print(result)
+        print("=======================================\n")
 
-            if product_name:
+        # Remove markdown code blocks
+        result = result.replace("```json", "")
+        result = result.replace("```JSON", "")
+        result = result.replace("```", "")
+        result = result.strip()
 
-                table_items.append({
-                    "product_name": product_name,
-                    "quantity": quantity
-                })
+        data = json.loads(result)
 
-        # If PDF/table products were successfully found,
-        # return them directly.
-        #
-        # This prevents the old number-splitting logic from
-        # changing 450, 5440, KB216, etc.
-        if table_items:
-            return table_items
+        items = data.get("items", [])
 
-    # ---------------------------------------------------------
-    # EXISTING LOGIC
-    # ---------------------------------------------------------
-    # Convert "and" before a quantity into a separator
-    # ---------------------------------------------------------
+        print("\n========== AI EXTRACTED ITEMS ==========")
+        print(items)
+        print("========================================\n")
 
-    text = re.sub(
-        r"\s+and\s+(?=\d+\s+)",
-        ", ",
-        text
-    )
+        return items
 
-    # ---------------------------------------------------------
-    # Remove unnecessary commas
-    # ---------------------------------------------------------
+    except Exception as e:
 
-    text = re.sub(
-        r",+",
-        ",",
-        text
-    )
+        print("\n========== AI ITEM EXTRACTION ERROR ==========")
+        print(str(e))
+        print("================================================\n")
 
-    # ---------------------------------------------------------
-    # EXISTING LOGIC
-    #
-    # Add comma before every new quantity.
-    #
-    # Example:
-    #
-    # 10 hp laptops 12 mouses 3 keyboards
-    #
-    # becomes:
-    #
-    # 10 hp laptops, 12 mouses, 3 keyboards
-    # ---------------------------------------------------------
-
-    text = re.sub(
-        r"\s+(?=\d+\s+)",
-        ", ",
-        text
-    )
-
-    # ---------------------------------------------------------
-    # Split into individual products
-    # ---------------------------------------------------------
-
-    parts = text.split(",")
-
-    items = []
-
-    for part in parts:
-
-        part = part.strip()
-
-        if not part:
-            continue
-
-        # -----------------------------------------------------
-        # EXISTING + NEW LOGIC:
-        #
-        # Product Name + Quantity + Unit
-        #
-        # Example:
-        #
-        # hp laptop 200 nos
-        # -----------------------------------------------------
-
-        match_product_first = re.match(
-            r"^(.+?)\s+(\d+)\s+(nos|no|units?|pcs?)\s*$",
-            part,
-            re.IGNORECASE
-        )
-
-        if match_product_first:
-
-            product_name = match_product_first.group(1).strip()
-
-            quantity = int(match_product_first.group(2))
-
-            # Remove "and" from beginning/end
-            product_name = re.sub(
-                r"^and\s+",
-                "",
-                product_name,
-                flags=re.IGNORECASE
-            )
-
-            product_name = re.sub(
-                r"\s+and$",
-                "",
-                product_name,
-                flags=re.IGNORECASE
-            )
-
-            if product_name:
-
-                items.append({
-                    "product_name": product_name,
-                    "quantity": quantity
-                })
-
-            continue
-
-        # -----------------------------------------------------
-        # YOUR ORIGINAL LOGIC
-        #
-        # Quantity + Product Name
-        #
-        # Example:
-        #
-        # 10 hp laptops
-        # -----------------------------------------------------
-
-        match = re.match(
-            r"^(\d+)\s+(.+?)\s*$",
-            part
-        )
-
-        if not match:
-            continue
-
-        quantity = int(match.group(1))
-
-        product_name = match.group(2).strip()
-
-        # -----------------------------------------------------
-        # Remove "and" from beginning/end
-        # -----------------------------------------------------
-
-        product_name = re.sub(
-            r"^and\s+",
-            "",
-            product_name
-        )
-
-        product_name = re.sub(
-            r"\s+and$",
-            "",
-            product_name
-        )
-
-        if product_name:
-
-            items.append({
-                "product_name": product_name,
-                "quantity": quantity
-            })
-
-    return items
+        return []

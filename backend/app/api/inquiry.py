@@ -18,7 +18,7 @@ from app.models.product import Product
 
 from app.ai.ocr import process_input
 from app.ai.product_search import search_product_by_embedding
-from app.ai.inquiry_parser import extract_items
+from app.ai.inquiry_parser import extract_items_with_ai
 from app.ai.quotation_calculator import calculate_quotation
 
 
@@ -73,7 +73,7 @@ async def extract_text(
     # 3. Extract products + quantities
     # ---------------------------------------------------------
 
-    extracted_items = extract_items(inquiry_text)
+    extracted_items = await extract_items_with_ai(inquiry_text)
 
     if not extracted_items:
         return {
