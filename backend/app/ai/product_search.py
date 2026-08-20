@@ -7,7 +7,7 @@ def search_product_by_embedding(
     Product,
     company_id,
     top_k=3,
-    score_threshold=0.75
+    score_threshold=0.85
 ):
     """
     Search products using Qdrant embeddings.

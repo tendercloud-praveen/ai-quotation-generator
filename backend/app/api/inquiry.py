@@ -117,7 +117,7 @@ async def extract_text(
             Product=Product,
             company_id=current_user.company_id,
             top_k=3,
-            score_threshold=0.75
+            score_threshold=0.85
         )
 
         similar_products = search_result.get(
