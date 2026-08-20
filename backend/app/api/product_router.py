@@ -416,3 +416,59 @@ async def bulk_upload_products(
         "products":
             saved_products
     }
+# =========================================================
+# DELETE PRODUCT API
+# =========================================================
+
+@router.delete("/{product_id}")
+async def delete_product(
+    product_id: int,
+    db: Session = Depends(get_db),
+    current_user=Depends(get_current_user)
+):
+
+    # -----------------------------------------------------
+    # Find product belonging to current company
+    # -----------------------------------------------------
+
+    product = (
+        db.query(Product)
+        .filter(
+            Product.id == product_id,
+            Product.company_id == current_user.company_id
+        )
+        .first()
+    )
+
+    # -----------------------------------------------------
+    # Product not found
+    # -----------------------------------------------------
+
+    if not product:
+        raise HTTPException(
+            status_code=404,
+            detail="Product not found"
+        )
+
+    # -----------------------------------------------------
+    # Delete product
+    # -----------------------------------------------------
+
+    try:
+
+        db.delete(product)
+        db.commit()
+
+        return {
+            "message": "Product deleted successfully",
+            "product_id": product_id
+        }
+
+    except Exception as e:
+
+        db.rollback()
+
+        raise HTTPException(
+            status_code=500,
+            detail=f"Failed to delete product: {str(e)}"
+        )
