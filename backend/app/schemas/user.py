@@ -11,7 +11,7 @@ class UserRegister(BaseModel):
     password: str
 
 class CreateUser(BaseModel):
-    company_name: str
+    # company_name: str
     full_name: str
     email: EmailStr
     mobile_number: str

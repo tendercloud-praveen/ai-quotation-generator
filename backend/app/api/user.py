@@ -70,7 +70,8 @@ def get_all_users(
                 "email": user.email,
                 "mobile_number": user.mobile_number,
                 "role": user.role,
-                "is_active": user.is_active
+                "is_active": user.is_active,
+                "created_at": user.created_at
             }
             for user in users
         ]
@@ -93,7 +94,9 @@ def get_user(
             "email": user.email,
             "mobile_number": user.mobile_number,
             "role": user.role,
-            "is_active": user.is_active
+            "is_active": user.is_active,
+            "created_at": user.created_at
+            
         }
     }
 
@@ -119,7 +122,8 @@ def update_user(
             "email": updated_user.email,
             "mobile_number": updated_user.mobile_number,
             "role": updated_user.role,
-            "is_active": updated_user.is_active
+            "is_active": updated_user.is_active,
+            "created_at": user.created_at
         }
     }
 

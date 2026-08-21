@@ -40,7 +40,7 @@ import {
 } from "../../services/userService";
 
 const empty = {
-  companyName: "",
+  // companyName: "",
   fullName: "",
   email: "",
   mobile: "",
@@ -79,7 +79,7 @@ export default function UsersPage() {
 
       const normalizedUsers = usersData.map((u) => ({
         id: u.id,
-        companyName: u.company_name,
+        // companyName: u.company_name,
         fullName: u.full_name,
         email: u.email,
         mobile: u.mobile_number,
@@ -116,10 +116,7 @@ export default function UsersPage() {
 
   const openAdd = () => {
     setEditing(null);
-    setForm({
-      ...empty,
-      companyName: currentUser?.companyName || "",
-    });
+    setForm(empty);
     setErrors({});
     setModalOpen(true);
   };
@@ -139,9 +136,9 @@ export default function UsersPage() {
   const validate = () => {
     const e = {};
 
-    if (!form.companyName?.trim()) {
-      e.companyName = "Company name is required";
-    }
+    // if (!form.companyName?.trim()) {
+    //   e.companyName = "Company name is required";
+    // }
 
     if (!form.fullName?.trim()) {
       e.fullName = "Full name is required";
@@ -203,7 +200,7 @@ export default function UsersPage() {
         toast.success("User updated successfully.");
       } else {
         const payload = {
-          company_name: form.companyName,
+          // company_name: form.companyName,
           full_name: form.fullName,
           email: form.email,
           mobile_number: form.mobile,
@@ -292,15 +289,15 @@ export default function UsersPage() {
       ),
     },
     {
-      key: "createdAt",
-      header: "Joined",
-      sortable: true,
-      render: (u) => (
-        <span className="text-slate-500 dark:text-slate-400">
-          {u.createdAt ? formatDate(u.createdAt) : "N/A"}
-        </span>
-      ),
-    },
+  key: "createdAt",
+  header: "Joined",
+  sortable: true,
+  render: (u) => (
+    <span className="text-slate-500 dark:text-slate-400">
+      {u.createdAt ? formatDate(u.createdAt) : "N/A"}
+    </span>
+  ),
+},
   ];
 
   return (
@@ -417,15 +414,16 @@ export default function UsersPage() {
             </Button>
           </>
         }
+        
       >
         <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-          <Input
+          {/* <Input
             label="Company Name"
             value={form.companyName}
             onChange={(e) => set("companyName", e.target.value)}
             error={errors.companyName}
             required
-          />
+          /> */}
           <Input
             label="Full Name"
             value={form.fullName}
@@ -573,9 +571,7 @@ export default function UsersPage() {
                 <div>
                   <p className="text-xs text-slate-400">Joined</p>
                   <p className="text-sm font-medium text-slate-700 dark:text-slate-200">
-                    {viewUser.createdAt
-                      ? formatDate(viewUser.createdAt)
-                      : "N/A"}
+                    {u.createdAt ? formatDate(u.createdAt) : "N/A"}
                   </p>
                 </div>
               </div>

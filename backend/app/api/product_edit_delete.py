@@ -48,7 +48,27 @@ def update_product(
         )
 
     # --------------------------------------------------------
-    # 2. Update product information
+    # 2. Check duplicate SKU
+    # --------------------------------------------------------
+
+    sku_exists = (
+        db.query(Product)
+        .filter(
+            Product.sku == product.sku,
+            Product.company_id == current_user.company_id,
+            Product.id != product_id
+        )
+        .first()
+    )
+
+    if sku_exists:
+        raise HTTPException(
+            status_code=400,
+            detail=f"SKU '{product.sku}' already exists"
+        )
+
+    # --------------------------------------------------------
+    # 3. Update product information
     # --------------------------------------------------------
 
     existing_product.sku = product.sku
@@ -61,20 +81,20 @@ def update_product(
     existing_product.description = product.description
 
     # --------------------------------------------------------
-    # 3. Save updated product
+    # 4. Save updated product
     # --------------------------------------------------------
 
     db.commit()
     db.refresh(existing_product)
 
     # --------------------------------------------------------
-    # 4. Update product embedding in Qdrant
+    # 5. Update product embedding in Qdrant
     # --------------------------------------------------------
 
     create_product_embedding(existing_product)
 
     # --------------------------------------------------------
-    # 5. Return updated product
+    # 6. Return updated product
     # --------------------------------------------------------
 
     return existing_product
