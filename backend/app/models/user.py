@@ -7,6 +7,8 @@ from sqlalchemy import (
     UniqueConstraint
 )
 from sqlalchemy.orm import relationship
+from datetime import datetime
+from sqlalchemy import Column, DateTime
 
 from app.database.database import Base
 
@@ -62,6 +64,7 @@ class User(Base):
         "Company",
         back_populates="users"
     )
+    created_at = Column(DateTime, default=datetime.utcnow)
 
     # Email must be unique only inside the same company
     __table_args__ = (

@@ -56,5 +56,7 @@ class LoginService:
             "full_name": existing_user.full_name,
             "email": existing_user.email,
             "role": existing_user.role,
-            "company_id": existing_user.company_id
+            "company_id": existing_user.company_id,
+            "created_at": existing_user.created_at
+            
         }
