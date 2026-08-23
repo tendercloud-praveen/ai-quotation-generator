@@ -41,13 +41,11 @@ IMPORTANT RULES:
 
 1. The number before a product is its quantity.
 2. Always extract an item when the input contains a number followed by a product.
-3. If no quantity is mentioned, always set quantity to 1.
-4. Never return quantity as 0.
-5. Correct obvious spelling mistakes.
-6. Multiple numbers usually mean multiple products.
-7. Do not explain anything.
-8. Do not return markdown.
-9. Return ONLY valid JSON.
+3. Correct obvious spelling mistakes.
+4. Multiple numbers usually mean multiple products.
+5. Do not explain anything.
+6. Do not return markdown.
+7. Return ONLY valid JSON.
 
 Examples:
 
@@ -60,20 +58,6 @@ Output:
         {{
             "product_name": "Dell laptops",
             "quantity": 12
-        }}
-    ]
-}}
-
-Output:
-{{
-    "items": [
-        {{
-            "product_name": "Dell laptop",
-            "quantity": 1
-        }},
-        {{
-            "product_name": "HP keyboard",
-            "quantity": 1
         }}
     ]
 }}
@@ -155,7 +139,7 @@ Return ONLY this JSON structure:
     "items": [
         {{
             "product_name": "product name",
-            "quantity": 1
+            "quantity": 0
         }}
     ]
 }}

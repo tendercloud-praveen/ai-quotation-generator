@@ -10,34 +10,17 @@ from app.services.email_service import EmailService
 
 class UserService:
 
-    # =========================================================
-    # REGISTER COMPANY + ADMIN
-    # =========================================================
     @staticmethod
     def register_user(
         db: Session,
         user: UserRegister
     ):
 
-        # -----------------------------------------------------
-        # 1. CHECK COMPANY NAME
-        # -----------------------------------------------------
-        existing_company = db.query(Company).filter(
-            Company.company_name == user.company_name
-        ).first()
-
-        if existing_company:
-            raise HTTPException(
-                status_code=400,
-                detail="Company name already exists."
-            )
-
-        # -----------------------------------------------------
-        # 2. CHECK EMAIL GLOBALLY
-        # -----------------------------------------------------
-        existing_email = db.query(User).filter(
-    User.email == user.email
-).first()
+        # 1. Check email globally
+        existing_email = UserRepository.get_user_by_email(
+            db,
+            user.email
+        )
 
         if existing_email:
             raise HTTPException(
@@ -45,9 +28,7 @@ class UserService:
                 detail="Email already exists."
             )
 
-        # -----------------------------------------------------
-        # 3. CHECK MOBILE GLOBALLY
-        # -----------------------------------------------------
+        # 2. Check mobile globally
         existing_mobile = UserRepository.get_user_by_mobile(
             db,
             user.mobile_number
@@ -59,20 +40,35 @@ class UserService:
                 detail="Mobile number already exists."
             )
 
-        # -----------------------------------------------------
-        # 4. CREATE COMPANY
-        # -----------------------------------------------------
-        company = Company(
-            company_name=user.company_name
-        )
+        # 3. Find company by company name
+        company = db.query(Company).filter(
+            Company.company_name == user.company_name
+        ).first()
 
-        db.add(company)
-        db.commit()
-        db.refresh(company)
+        # 4. If company doesn't exist, create it
+        if not company:
 
-        # -----------------------------------------------------
-        # 5. CREATE ADMIN
-        # -----------------------------------------------------
+            company = Company(
+                company_name=user.company_name
+            )
+
+            db.add(company)
+            db.commit()
+            db.refresh(company)
+
+        # 5. Check whether this company already has ADMIN
+        existing_admin = db.query(User).filter(
+            User.company_id == company.id,
+            User.role == "ADMIN"
+        ).first()
+
+        if existing_admin:
+            raise HTTPException(
+                status_code=400,
+                detail="This company already has an admin account."
+            )
+
+        # 6. Create ADMIN
         new_user = User(
             full_name=user.full_name,
             email=user.email,
@@ -82,23 +78,18 @@ class UserService:
             company_id=company.id
         )
 
-        # -----------------------------------------------------
-        # 6. SAVE ADMIN
-        # -----------------------------------------------------
+        # 7. Save ADMIN
         created_user = UserRepository.create_user(
             db,
             new_user
         )
 
-        # -----------------------------------------------------
-        # 7. SEND EMAIL
-        # -----------------------------------------------------
+        # 8. Send email
         EmailService.send_account_created_email(
             created_user
         )
 
         return created_user
-
 
     # =========================================================
     # ADMIN CREATES SALES / MANAGER / OTHER USERS
@@ -110,42 +101,36 @@ class UserService:
         current_user: User
     ):
 
-        # -----------------------------------------------------
-        # 1. ONLY ADMIN CAN CREATE USERS
-        # -----------------------------------------------------
+        # 1. Only ADMIN can create users
         if current_user.role != "ADMIN":
             raise HTTPException(
                 status_code=403,
                 detail="Only admin can create users."
             )
 
-        # -----------------------------------------------------
-        # 2. GET ADMIN COMPANY ID
-        # -----------------------------------------------------
+        # 2. Get company from logged-in ADMIN
         company_id = current_user.company_id
 
         # -----------------------------------------------------
-        # 3. CHECK EMAIL GLOBALLY
+        # 3. Check EMAIL only inside this company
         # -----------------------------------------------------
-        existing_email = UserRepository.get_user_by_email(
-            db,
-            user.email,
-            company_id
-        )
+        existing_email = db.query(User).filter(
+            User.email == user.email,
+            # User.company_id == company_id
+        ).first()
 
         if existing_email:
             raise HTTPException(
                 status_code=400,
-                detail="Email already exists."
+                detail="Email already exists"
             )
 
         # -----------------------------------------------------
-        # 4. CHECK MOBILE GLOBALLY
+        # 4. Check MOBILE globally
         # -----------------------------------------------------
-        existing_mobile = UserRepository.get_user_by_mobile(
-            db,
-            user.mobile_number
-        )
+        existing_mobile = db.query(User).filter(
+            User.mobile_number == user.mobile_number
+        ).first()
 
         if existing_mobile:
             raise HTTPException(
@@ -154,7 +139,7 @@ class UserService:
             )
 
         # -----------------------------------------------------
-        # 5. DO NOT ALLOW ANOTHER ADMIN
+        # 5. Don't allow another ADMIN
         # -----------------------------------------------------
         if user.role == "ADMIN":
 
@@ -170,7 +155,7 @@ class UserService:
                 )
 
         # -----------------------------------------------------
-        # 6. CREATE USER
+        # 6. Create new user
         # -----------------------------------------------------
         new_user = User(
             full_name=user.full_name,
@@ -182,7 +167,7 @@ class UserService:
         )
 
         # -----------------------------------------------------
-        # 7. SAVE USER
+        # 7. Save user
         # -----------------------------------------------------
         created_user = UserRepository.create_user(
             db,
@@ -190,7 +175,6 @@ class UserService:
         )
 
         return created_user
-
 
     # =========================================================
     # GET USER BY ID
@@ -214,7 +198,6 @@ class UserService:
 
         return user
 
-
     # =========================================================
     # UPDATE USER
     # =========================================================
@@ -225,9 +208,7 @@ class UserService:
         user_data: UpdateUser
     ):
 
-        # -----------------------------------------------------
-        # 1. FIND USER
-        # -----------------------------------------------------
+        # 1. Find user
         user = UserRepository.get_user_by_id(
             db,
             user_id
@@ -240,35 +221,7 @@ class UserService:
             )
 
         # -----------------------------------------------------
-        # 2. CHECK EMAIL GLOBALLY
-        # -----------------------------------------------------
-        existing_email = db.query(User).filter(
-            User.email == user_data.email,
-            User.id != user.id
-        ).first()
-
-        if existing_email:
-            raise HTTPException(
-                status_code=400,
-                detail="Email already exists."
-            )
-
-        # -----------------------------------------------------
-        # 3. CHECK MOBILE GLOBALLY
-        # -----------------------------------------------------
-        existing_mobile = db.query(User).filter(
-            User.mobile_number == user_data.mobile_number,
-            User.id != user.id
-        ).first()
-
-        if existing_mobile:
-            raise HTTPException(
-                status_code=400,
-                detail="Mobile number already exists."
-            )
-
-        # -----------------------------------------------------
-        # 4. CHECK ADMIN
+        # 2. If changing user to ADMIN
         # -----------------------------------------------------
         if (
             user_data.role == "ADMIN"
@@ -288,7 +241,7 @@ class UserService:
                 )
 
         # -----------------------------------------------------
-        # 5. UPDATE USER
+        # 3. Update fields
         # -----------------------------------------------------
         user.full_name = user_data.full_name
         user.email = user_data.email
@@ -297,13 +250,12 @@ class UserService:
         user.is_active = user_data.is_active
 
         # -----------------------------------------------------
-        # 6. SAVE USER
+        # 4. Save changes
         # -----------------------------------------------------
         return UserRepository.update_user(
             db,
             user
         )
-
 
     # =========================================================
     # DELETE USER
@@ -314,9 +266,7 @@ class UserService:
         user_id: int
     ):
 
-        # -----------------------------------------------------
-        # 1. FIND USER
-        # -----------------------------------------------------
+        # 1. Find user
         user = UserRepository.get_user_by_id(
             db,
             user_id
@@ -328,9 +278,7 @@ class UserService:
                 detail="User not found."
             )
 
-        # -----------------------------------------------------
-        # 2. DELETE USER
-        # -----------------------------------------------------
+        # 2. Delete user
         UserRepository.delete_user(
             db,
             user
