@@ -5,10 +5,10 @@ from app.models.otp import OTP
 class ForgotPasswordRepository:
 
     @staticmethod
-    def get_user_by_email(db, email,company_id):
+    def get_user_by_email(db, email):
 
         return db.query(User).filter(
-            User.email == email,User.company_id == company_id
+            User.email == email
         ).first()
 
     @staticmethod
