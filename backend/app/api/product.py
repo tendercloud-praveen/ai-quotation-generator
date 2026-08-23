@@ -8,6 +8,7 @@ from app.models.user import User
 from app.utils.auth import get_current_user
 
 from app.ai.product_embedding import create_product_embedding
+from fastapi import APIRouter, Depends, HTTPException
 
 
 router = APIRouter(
@@ -23,8 +24,23 @@ def create_product(
     current_user: User = Depends(get_current_user)
 ):
 
-    # 1. Save product to PostgreSQL
+    # Check if SKU already exists
+    existing_product = (
+        db.query(Product)
+        .filter(
+            Product.sku == product.sku
+        )
+        .first()
+    )
 
+    if existing_product:
+        raise HTTPException(
+                            status_code=400,
+                            detail=f"SKU '{product.sku}' already exists"
+                        )
+        
+
+    # Create product
     new_product = Product(
         sku=product.sku,
         category=product.category,
@@ -41,12 +57,6 @@ def create_product(
     db.commit()
     db.refresh(new_product)
 
-
-    # 2. Create embedding and store in Qdrant
-
     create_product_embedding(new_product)
-
-
-    # 3. Return product
 
     return new_product

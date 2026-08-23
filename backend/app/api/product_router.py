@@ -15,6 +15,7 @@ from app.database.database import get_db
 from app.utils.auth import get_current_user
 from app.ai.ocr import process_input
 from app.models.product import Product
+from sqlalchemy.exc import IntegrityError
 
 from app.services.product_ai_extractor import (
     extract_products_with_ai
@@ -201,11 +202,7 @@ async def bulk_upload_products(
     )
 
 
-    # =====================================================
-    # 4. EXTRACT PRODUCTS
-    # =====================================================
-
-    # First try normal extraction
+    
 
     products = extract_products_from_text(
         extracted_text
@@ -253,6 +250,7 @@ async def bulk_upload_products(
     # 5. SAVE PRODUCTS TO DATABASE
     # =====================================================
 
+    existing_skus = []
     saved_products = []
 
 
@@ -283,8 +281,12 @@ async def bulk_upload_products(
 
 
             if existing_product:
-
+                existing_skus.append(product_data["sku"])
                 continue
+   
+               
+
+              
 
 
             # ---------------------------------------------
@@ -388,14 +390,40 @@ async def bulk_upload_products(
             })
 
 
-    except Exception as e:
-
+    except HTTPException:
         db.rollback()
-
+        raise
+    except IntegrityError:
+        db.rollback()
         raise HTTPException(
-            status_code=500,
-            detail=f"Database save failed: {str(e)}"
-        )
+                status_code=400,
+                detail="Duplicate SKU found while saving products"
+            )
+    except Exception:
+        db.rollback()
+        raise HTTPException(
+                        status_code=500,
+                        detail="Database save failed"
+                    )
+        
+            
+    
+            
+    
+    
+    
+
+
+
+    
+
+
+    
+
+
+    
+
+
 
 
     # =====================================================
@@ -404,17 +432,17 @@ async def bulk_upload_products(
 
     return {
 
-        "message":
-            "Products uploaded successfully",
+        "message": "Products processed successfully",
 
-        "total_extracted":
-            len(products),
+    "total_extracted": len(products),
 
-        "total_saved":
-            len(saved_products),
+    "total_saved": len(saved_products),
 
-        "products":
-            saved_products
+    "total_existing": len(existing_skus),
+
+    "existing_skus": existing_skus,
+
+    "products": saved_products
     }
 # =========================================================
 # DELETE PRODUCT API

@@ -7,8 +7,8 @@ from app.models.company import Company
 class UserRepository:
 
     @staticmethod
-    def get_user_by_email(db: Session, email: str):
-        return db.query(User).filter(User.email == email).first()
+    def get_user_by_email(db: Session, email: str,company_id: int):
+        return db.query(User).filter(User.email == email,User.company_id == company_id).first()
 
     @staticmethod
     def get_user_by_mobile(db: Session, mobile_number: str):
