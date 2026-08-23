@@ -20,10 +20,25 @@ router = APIRouter(
 def create_product(
     product: ProductCreate,
     db: Session = Depends(get_db),
-    current_user: User = Depends(get_current_user)
+    current_user: User = Depends(get_current_user),
+   
+    
 ):
 
+<<<<<<< Updated upstream
     # 1. Save product to PostgreSQL
+=======
+    # Check if SKU already exists
+    existing_product = (
+        db.query(Product)
+        .filter(
+            Product.sku == product.sku,
+            Product.company_id == current_user.company_id
+            
+        )
+        .first()
+    )
+>>>>>>> Stashed changes
 
     new_product = Product(
         sku=product.sku,
