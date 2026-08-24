@@ -68,6 +68,8 @@ def search_products(
     company_id,
     top_k=1
 ):
+    company_id = int(company_id)
+
     create_collection()
     print("Searching company ID:", company_id)
 
@@ -87,5 +89,6 @@ def search_products(
         limit=top_k,
         with_payload=True
     )
+    print("Qdrant results:", results.points)
 
     return results.points

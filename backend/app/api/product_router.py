@@ -249,6 +249,7 @@ async def bulk_upload_products(
     # =====================================================
 
     saved_products = []
+    skipped_products = []
 
 
     try:
@@ -278,6 +279,11 @@ async def bulk_upload_products(
 
 
             if existing_product:
+                skipped_products.append({
+        "product_name": product_data["product_name"],
+        "sku": product_data["sku"],
+        "reason": "Product already exists"
+    })
 
                 continue
 
@@ -399,17 +405,12 @@ async def bulk_upload_products(
 
     return {
 
-        "message":
-            "Products uploaded successfully",
-
-        "total_extracted":
-            len(products),
-
-        "total_saved":
-            len(saved_products),
-
-        "products":
-            saved_products
+        "message": "Products uploaded successfully",
+    "total_extracted": len(products),
+    "total_saved": len(saved_products),
+    "total_skipped": len(skipped_products),
+    "saved_products": saved_products,
+    "skipped_products": skipped_products
     }
 # =========================================================
 # DELETE PRODUCT API

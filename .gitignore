@@ -38,3 +38,8 @@ venv/
 dist/
 build/
 qdrant_storage/
+# Environment files
+.env
+
+# Qdrant local storage backup
+qdrant_storage_backup/

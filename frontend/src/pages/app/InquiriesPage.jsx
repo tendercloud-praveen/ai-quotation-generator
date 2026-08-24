@@ -1750,7 +1750,7 @@ if (file) {
   formData.append("file", file);
 }
 
-const result = await extractInquiryTextApi(formData);
+const result = await extractInquiryTextApi(text);
 
       console.log("Inquiry API response:", result);
 
