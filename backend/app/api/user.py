@@ -4,13 +4,13 @@ from fastapi import APIRouter, Depends
 from fastapi import APIRouter, Depends
 from sqlalchemy.orm import Session
 
-from app.utils.auth import get_current_admin
+
 from app.models.user import User
 
 from app.database.database import get_db
 from app.schemas.user import UserRegister, CreateUser, UpdateUser
 from app.services.user_service import UserService
-from app.utils.auth import get_current_user
+from app.utils.auth import get_current_user,get_admin_manager_sales,get_current_admin
 
 router = APIRouter(
     prefix="/users",
@@ -49,7 +49,7 @@ def create_user(
 @router.get("/")
 def get_all_users(
     db: Session = Depends(get_db),
-    current_admin: User = Depends(get_current_admin),
+    current_admin: User = Depends(get_admin_manager_sales),
     current_user: User = Depends(get_current_user)
 ):
     users = (
@@ -81,10 +81,10 @@ def get_all_users(
 def get_user(
     user_id: int,
     db: Session = Depends(get_db),
-    current_admin: User = Depends(get_current_admin),
+    current_admin: User = Depends(get_admin_manager_sales),
     current_user: User = Depends(get_current_user)
 ):
-    user = UserService.get_user_by_id(db, user_id)
+    user = UserService.get_user_by_id(db, user_id,current_user.company_id)
 
     return {
         "message": "User fetched successfully",
@@ -106,7 +106,7 @@ def update_user(
     user_id: int,
     user: UpdateUser,
     db: Session = Depends(get_db),
-    current_admin: User = Depends(get_current_admin)
+    current_admin: User = Depends(get_admin_manager_sales)
 ):
     updated_user = UserService.update_user(
         db,
@@ -133,7 +133,7 @@ def update_user(
 def delete_user(
     user_id: int,
     db: Session = Depends(get_db),
-    current_admin: User = Depends(get_current_admin)
+    current_admin: User = Depends(get_admin_manager_sales)
 ):
     user = db.query(User).filter(User.id == user_id).first()
 
