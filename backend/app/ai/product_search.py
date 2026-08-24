@@ -93,10 +93,13 @@ def search_product_by_embedding(
     # ---------------------------------------------------------
 
     products = (
-        db.query(Product)
-        .filter(Product.id.in_(product_ids))
-        .all()
+    db.query(Product)
+    .filter(
+        Product.id.in_(product_ids),
+        Product.company_id == company_id
     )
+    .all()
+)
 
     # ---------------------------------------------------------
     # 7. Qdrant product exists but PostgreSQL product doesn't
