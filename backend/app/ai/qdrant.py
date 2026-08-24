@@ -68,6 +68,8 @@ def search_products(
     company_id,
     top_k=1
 ):
+    create_collection()
+    print("Searching company ID:", company_id)
 
     company_filter = Filter(
         must=[

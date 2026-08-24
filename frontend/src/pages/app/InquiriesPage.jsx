@@ -1726,13 +1726,13 @@ export default function InquiriesPage() {
   const runAi = async (inquiryText = form.text) => {
     const text = inquiryText?.trim() || "";
 
-    if (!text) {
-      setErrors({
-        text: "Enter inquiry text first",
-      });
+    // if (!text) {
+    //   setErrors({
+    //     text: "Enter inquiry text first",
+    //   });
 
-      return;
-    }
+    //   return;
+    // }
 
     setAiLoading(true);
 
@@ -1741,7 +1741,16 @@ export default function InquiriesPage() {
          CALL BACKEND
       ================================================= */
 
-      const result = await extractInquiryTextApi(text);
+      
+      const formData = new FormData();
+
+formData.append("text", text);
+
+if (file) {
+  formData.append("file", file);
+}
+
+const result = await extractInquiryTextApi(formData);
 
       console.log("Inquiry API response:", result);
 
@@ -1924,14 +1933,14 @@ export default function InquiriesPage() {
         extraction API was provided.
       */
 
-      if (!extracted && file) {
-        extracted = `Extracted from ${file.name}: Need 2 units of centrifugal pump 1.5HP and 4 gate valves 100mm for cooling line.`;
+      // if (!extracted && file) {
+      //   extracted = `Extracted from ${file.name}: Need 2 units of centrifugal pump 1.5HP and 4 gate valves 100mm for cooling line.`;
 
-        setForm((current) => ({
-          ...current,
-          text: extracted,
-        }));
-      }
+      //   setForm((current) => ({
+      //     ...current,
+      //     text: extracted,
+      //   }));
+      // }
 
       await runAi(extracted);
     } catch (error) {
@@ -2522,7 +2531,7 @@ export default function InquiriesPage() {
             <div className="flex items-center justify-between mb-1.5">
               <label className="text-sm font-medium text-slate-700 dark:text-slate-300">
                 Inquiry Text
-                <span className="text-red-500 ml-0.5">*</span>
+                {/* <span className="text-red-500 ml-0.5">*</span> */}
               </label>
             </div>
 
