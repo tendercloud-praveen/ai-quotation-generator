@@ -142,24 +142,19 @@ async def bulk_upload_products(
 
 
     allowed_extensions = [
-
-        ".pdf",
-
-        ".docx",
-
-        ".jpg",
-
-        ".jpeg",
-
-        ".png",
-
-        ".bmp",
-
-        ".tiff",
-
-        ".webp"
-    ]
-
+    ".pdf",
+    ".docx",
+    ".xlsx",
+    ".xls",
+    ".csv",
+    ".txt",
+    ".jpg",
+    ".jpeg",
+    ".png",
+    ".bmp",
+    ".tiff",
+    ".webp"
+]
 
     if extension not in allowed_extensions:
 

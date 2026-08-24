@@ -1,4 +1,5 @@
 from typing import Optional
+import pandas as pd
 
 from fastapi import UploadFile
 import fitz
@@ -102,6 +103,19 @@ async def process_input(
                 extracted_text += page.get_text()
 
             pdf.close()
+        elif file.content_type == (
+    "application/vnd.openxmlformats-officedocument."
+    "spreadsheetml.sheet"
+):
+            print("Processing Excel file...")
+            
+            excel_file = io.BytesIO(content)
+            
+            df = pd.read_excel(excel_file)
+            
+            extracted_text = df.to_string(index=False)
+
+    
 
 
      
