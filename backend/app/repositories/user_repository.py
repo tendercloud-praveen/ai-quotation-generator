@@ -38,13 +38,13 @@ class UserRepository:
 
 
     @staticmethod
-    def get_user_by_id(db: Session, user_id: int):
-        return db.query(User).filter(User.id == user_id).first()
-        return db.query(User).filter(User.id == user_id).first()
+    def get_user_by_id(db: Session, user_id: int,company_id: int):
+        return db.query(User).filter(User.id == user_id,User.company_id == company_id).first()
+       
 
-    @staticmethod
-    def get_user_by_id(db: Session, user_id: int):
-     return db.query(User).filter(User.id == user_id).first()
+    # @staticmethod
+    # def get_user_by_id(db: Session, user_id: int):
+    #  return db.query(User).filter(User.id == user_id).first()
 
 
     @staticmethod

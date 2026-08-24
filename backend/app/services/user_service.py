@@ -182,12 +182,14 @@ class UserService:
     @staticmethod
     def get_user_by_id(
         db: Session,
-        user_id: int
+        user_id: int,
+        company_id:int
     ):
 
         user = UserRepository.get_user_by_id(
             db,
-            user_id
+            user_id,
+            company_id
         )
 
         if not user:
