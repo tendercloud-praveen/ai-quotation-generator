@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useState } from "react";
+import { useEffect, useMemo, useState, useRef } from "react";
 import {
   Users as UsersIcon,
   UserPlus,
@@ -8,6 +8,7 @@ import {
   Phone,
   Shield,
   Eye,
+  EyeOff,
   Loader2,
 } from "lucide-react";
 import PageHeader from "../../components/PageHeader";
@@ -33,7 +34,6 @@ import { ROLE_LABELS } from "../../lib/nav";
 import { useRole } from "../../lib/RoleContext";
 import {
   fetchUsersApi,
-  getUserByIdApi,
   createUserApi,
   updateUserApi,
   deleteUserApi,
@@ -63,6 +63,12 @@ export default function UsersPage() {
   const [editing, setEditing] = useState(null);
   const [form, setForm] = useState(empty);
   const [errors, setErrors] = useState({});
+
+  // Password visibility for the Add/Edit User modal.
+  const [showPassword, setShowPassword] = useState(false);
+  const [showConfirmPassword, setShowConfirmPassword] = useState(false);
+  const passwordTimerRef = useRef(null);
+  const confirmPasswordTimerRef = useRef(null);
   const [deleteId, setDeleteId] = useState(null);
   const [viewUser, setViewUser] = useState(null);
 
@@ -115,6 +121,19 @@ export default function UsersPage() {
   }, [users, search, roleFilter]);
 
   const openAdd = () => {
+    if (passwordTimerRef.current) {
+      clearTimeout(passwordTimerRef.current);
+      passwordTimerRef.current = null;
+    }
+
+    if (confirmPasswordTimerRef.current) {
+      clearTimeout(confirmPasswordTimerRef.current);
+      confirmPasswordTimerRef.current = null;
+    }
+
+    setShowPassword(false);
+    setShowConfirmPassword(false);
+
     setEditing(null);
     setForm(empty);
     setErrors({});
@@ -122,8 +141,25 @@ export default function UsersPage() {
   };
 
   const openEdit = (u) => {
+    if (passwordTimerRef.current) {
+      clearTimeout(passwordTimerRef.current);
+      passwordTimerRef.current = null;
+    }
+
+    if (confirmPasswordTimerRef.current) {
+      clearTimeout(confirmPasswordTimerRef.current);
+      confirmPasswordTimerRef.current = null;
+    }
+
+    setShowPassword(false);
+    setShowConfirmPassword(false);
+
     setEditing(u);
-    setForm({ ...u, password: "", confirm: "" });
+    setForm({
+      ...u,
+      password: "",
+      confirm: "",
+    });
     setErrors({});
     setModalOpen(true);
   };
@@ -289,17 +325,56 @@ export default function UsersPage() {
       ),
     },
     {
-  key: "createdAt",
-  header: "Joined",
-  sortable: true,
-  render: (u) => (
-    <span className="text-slate-500 dark:text-slate-400">
-      {u.createdAt ? formatDate(u.createdAt) : "N/A"}
-    </span>
-  ),
-},
+      key: "createdAt",
+      header: "Joined",
+      sortable: true,
+      render: (u) => (
+        <span className="text-slate-500 dark:text-slate-400">
+          {u.createdAt ? formatDate(u.createdAt) : "N/A"}
+        </span>
+      ),
+    },
   ];
 
+  const togglePasswordVisibility = () => {
+    // Clear previous timer
+    if (passwordTimerRef.current) {
+      clearTimeout(passwordTimerRef.current);
+    }
+
+    setShowPassword((prev) => {
+      const next = !prev;
+
+      // If showing password, automatically hide after 5 seconds
+      if (next) {
+        passwordTimerRef.current = setTimeout(() => {
+          setShowPassword(false);
+        }, 5000);
+      }
+
+      return next;
+    });
+  };
+
+  const toggleConfirmPasswordVisibility = () => {
+    // Clear previous timer
+    if (confirmPasswordTimerRef.current) {
+      clearTimeout(confirmPasswordTimerRef.current);
+    }
+
+    setShowConfirmPassword((prev) => {
+      const next = !prev;
+
+      // If showing password, automatically hide after 5 seconds
+      if (next) {
+        confirmPasswordTimerRef.current = setTimeout(() => {
+          setShowConfirmPassword(false);
+        }, 5000);
+      }
+
+      return next;
+    });
+  };
   return (
     <div className="space-y-6 animate-fade-in">
       <Breadcrumbs items={[{ label: "Users" }]} />
@@ -402,7 +477,25 @@ export default function UsersPage() {
         size="lg"
         footer={
           <>
-            <Button variant="secondary" onClick={() => setModalOpen(false)}>
+            <Button
+              variant="secondary"
+              onClick={() => {
+                setModalOpen(false);
+
+                setShowPassword(false);
+                setShowConfirmPassword(false);
+
+                if (passwordTimerRef.current) {
+                  clearTimeout(passwordTimerRef.current);
+                  passwordTimerRef.current = null;
+                }
+
+                if (confirmPasswordTimerRef.current) {
+                  clearTimeout(confirmPasswordTimerRef.current);
+                  confirmPasswordTimerRef.current = null;
+                }
+              }}
+            >
               Cancel
             </Button>
             <Button onClick={save} disabled={isSubmitting}>
@@ -414,7 +507,6 @@ export default function UsersPage() {
             </Button>
           </>
         }
-        
       >
         <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
           {/* <Input
@@ -459,22 +551,53 @@ export default function UsersPage() {
             <option value="sales_rep">Sales Rep</option>
             <option value="manager">Manager</option>
           </Select>
-          <Input
-            label={editing ? "New Password (leave blank to keep)" : "Password"}
-            type="password"
-            value={form.password}
-            onChange={(e) => set("password", e.target.value)}
-            error={errors.password}
-            required={!editing}
-          />
-          <Input
-            label="Confirm Password"
-            type="password"
-            value={form.confirm}
-            onChange={(e) => set("confirm", e.target.value)}
-            error={errors.confirm}
-            required={!editing}
-          />
+          {/* Password */}
+          <div className="relative">
+            <Input
+              label={
+                editing ? "New Password (leave blank to keep)" : "Password"
+              }
+              type={showPassword ? "text" : "password"}
+              value={form.password}
+              onChange={(e) => set("password", e.target.value)}
+              error={errors.password}
+              required={!editing}
+            />
+
+            <button
+              type="button"
+              onClick={togglePasswordVisibility}
+              className="absolute right-3 top-[38px] z-10 text-slate-400 hover:text-slate-600 dark:hover:text-slate-200 transition-colors"
+              aria-label={showPassword ? "Hide password" : "Show password"}
+            >
+              {showPassword ? <EyeOff size={18} /> : <Eye size={18} />}
+            </button>
+          </div>
+
+          {/* Confirm Password */}
+          <div className="relative">
+            <Input
+              label="Confirm Password"
+              type={showConfirmPassword ? "text" : "password"}
+              value={form.confirm}
+              onChange={(e) => set("confirm", e.target.value)}
+              error={errors.confirm}
+              required={!editing}
+            />
+
+            <button
+              type="button"
+              onClick={toggleConfirmPasswordVisibility}
+              className="absolute right-3 top-[38px] z-10 text-slate-400 hover:text-slate-600 dark:hover:text-slate-200 transition-colors"
+              aria-label={
+                showConfirmPassword
+                  ? "Hide confirm password"
+                  : "Show confirm password"
+              }
+            >
+              {showConfirmPassword ? <EyeOff size={18} /> : <Eye size={18} />}
+            </button>
+          </div>
           {editing && (
             <Select
               label="Status"
@@ -571,7 +694,9 @@ export default function UsersPage() {
                 <div>
                   <p className="text-xs text-slate-400">Joined</p>
                   <p className="text-sm font-medium text-slate-700 dark:text-slate-200">
-                    {u.createdAt ? formatDate(u.createdAt) : "N/A"}
+                    {viewUser.createdAt
+                      ? formatDate(viewUser.createdAt)
+                      : "N/A"}
                   </p>
                 </div>
               </div>

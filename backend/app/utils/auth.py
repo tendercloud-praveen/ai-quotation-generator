@@ -81,12 +81,15 @@ def get_current_admin(
 def get_admin_manager_sales(
     current_user: User = Depends(get_current_user)
 ):
-    allowed_roles = ["admin", "manager", "sales"]
+     print("CURRENT USER:", current_user.id)
+     print("CURRENT USER ROLE:", repr(current_user.role))
 
-    if current_user.role.lower() not in allowed_roles:
+     allowed_roles = ["admin", "manager", "sales_rep"]
+
+     if current_user.role.lower() not in allowed_roles:
         raise HTTPException(
             status_code=status.HTTP_403_FORBIDDEN,
             detail="You do not have permission to access this resource"
         )
-
-    return current_user
+ 
+     return current_user
