@@ -1769,18 +1769,12 @@ const result = await extractInquiryTextApi(formData);
       /* =================================================
          SIMILAR PRODUCTS
       ================================================= */
-
-      const similarProducts = matchResult.similar_products || [];
-
-      const confidence =
-        similarProducts.length > 0 ? Number(similarProducts[0].score || 0) : 0;
-
-      /* =================================================
-         PRODUCTS FROM BACKEND
-      ================================================= */
-
       const backendProducts = matchResult.products || [];
 
+      const confidence =
+        backendProducts.length > 0
+          ? Number(backendProducts[0].confidence_score || 0)
+          : 0;
       /* =================================================
          ITEMS FROM BACKEND
       ================================================= */
@@ -2099,6 +2093,8 @@ const result = await extractInquiryTextApi(formData);
         company_id: Number(companyId),
 
         customer_id: Number(form.customerId),
+
+        ai_confidence: aiResult?.confidence ?? 0,
 
         inquiry_text: form.text.trim(),
 
