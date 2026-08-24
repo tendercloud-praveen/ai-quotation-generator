@@ -9,7 +9,7 @@ class Product(Base):
 
     id = Column(Integer, primary_key=True, index=True)
 
-    sku = Column(String, unique=True, nullable=False)
+    sku = Column(String, nullable=False)
     category = Column(String, nullable=False)
     product_name = Column(String, nullable=False)
     unit = Column(String, nullable=False)

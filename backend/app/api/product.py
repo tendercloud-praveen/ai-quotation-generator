@@ -1,4 +1,4 @@
-from fastapi import APIRouter, Depends
+from fastapi import APIRouter, Depends,HTTPException
 from sqlalchemy.orm import Session
 
 from app.database.database import get_db
@@ -25,9 +25,6 @@ def create_product(
     
 ):
 
-<<<<<<< Updated upstream
-    # 1. Save product to PostgreSQL
-=======
     # Check if SKU already exists
     existing_product = (
         db.query(Product)
@@ -38,7 +35,21 @@ def create_product(
         )
         .first()
     )
->>>>>>> Stashed changes
+    existing_product = (
+    db.query(Product)
+    .filter(
+        Product.company_id == current_user.company_id,
+        Product.sku == product.sku
+    )
+    .first()
+)
+
+    if existing_product:
+        raise HTTPException(
+                status_code=400,
+                detail="This SKU already exists for your company"
+            )
+    
 
     new_product = Product(
         sku=product.sku,
