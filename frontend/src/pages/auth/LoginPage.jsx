@@ -248,7 +248,7 @@ import { useToast } from "../../components/Toast";
 import { validateEmail } from "../../lib/validate";
 import { loginUser } from "../../services/documentservice";
 import { setSession } from "../../lib/auth";
-
+import { useRole } from "../../lib/RoleContext";
 export default function LoginPage() {
   const toast = useToast();
   const navigate = useNavigate();
@@ -257,7 +257,7 @@ export default function LoginPage() {
     email: "",
     password: "",
   });
-
+  const { setUser } = useRole();
   const [errors, setErrors] = useState({});
   const [show, setShow] = useState(false);
   const [loading, setLoading] = useState(false);
@@ -433,15 +433,16 @@ export default function LoginPage() {
         companyId: response.company_id,
       };
 
-      console.log("SAVING SESSION:", loggedInUser);
-
+      // Save cookies
       setSession(response.access_token, loggedInUser);
 
-      console.log("SESSION SAVED:", localStorage.getItem("quotaai:session"));
+      // IMPORTANT:
+      // Update React RoleContext immediately.
+      // This removes the need to refresh the browser.
+      setUser(loggedInUser);
 
       toast.success(response?.message || "Login successful");
 
-      // Navigate after session has been created
       navigate("/app/dashboard", {
         replace: true,
       });
