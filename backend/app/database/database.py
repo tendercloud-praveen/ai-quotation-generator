@@ -30,6 +30,7 @@ SessionLocal = sessionmaker(
     bind=engine
 )
 
+#cd .\ai-quotation-generator
 Base = declarative_base()
 
 try:
