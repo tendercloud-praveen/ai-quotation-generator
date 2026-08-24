@@ -7,6 +7,7 @@ from sqlalchemy.orm import Session
 
 from app.database.database import get_db
 from app.models.quotations import Quotation, QuotationItem
+from app.models.product import Product
 from app.models.user import User
 from app.utils.auth import get_current_user
 
@@ -304,23 +305,41 @@ def get_quotation_details(
             item.unit_price
         )
 
-        subtotal = float(
+
+
+        product = (
+    db.query(Product)
+    .filter(Product.id == item.product_id)
+    .first()
+     )
+
+    cost_price = float(product.cost_price) if product else 0.0
+
+    margin = (
+    (unit_price - cost_price)
+    * quantity
+        )
+
+
+
+
+    subtotal = float(
             item.subtotal
         )
 
-        gst_percentage = float(
+    gst_percentage = float(
             item.gst_percentage
         )
 
-        gst_amount = float(
+    gst_amount = float(
             item.gst_amount
         )
 
-        total_price = float(
+    total_price = float(
             item.total_price
         )
 
-        response_items.append({
+    response_items.append({
             "quotation_item_id": item.id,
 
             "product_id": item.product_id,
@@ -332,6 +351,10 @@ def get_quotation_details(
             "unit": item.unit,
 
             "unit_price": unit_price,
+
+            "cost_price": cost_price,
+
+            "margin": margin,
 
             "gst_percentage": gst_percentage,
 

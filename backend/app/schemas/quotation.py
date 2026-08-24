@@ -24,6 +24,7 @@ class QuotationCreate(BaseModel):
     user_id: int
     customer_id: int
     company_id: int
+    ai_confidence: float = 0
     inquiry_text: str
     summary: QuotationSummary
     items: List[QuotationItemCreate]

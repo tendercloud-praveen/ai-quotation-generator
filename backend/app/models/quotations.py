@@ -59,6 +59,12 @@ class Quotation(Base):
         default=0
     )
 
+
+    ai_confidence = Column(
+    Float,
+    nullable=True
+    )   
+
     grand_total = Column(
         Float,
         nullable=False,

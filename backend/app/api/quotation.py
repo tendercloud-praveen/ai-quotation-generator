@@ -831,6 +831,9 @@ def get_quotations(
                     2
                 ),
 
+
+            "ai_confidence": quotation.ai_confidence,    
+
             "status":
                 quotation.status,
 
@@ -913,6 +916,8 @@ def save_quotation(
             total_gst=quotation_data.summary.total_gst,
 
             grand_total=quotation_data.summary.grand_total,
+
+            ai_confidence=quotation_data.ai_confidence,
 
             status="DRAFT"
         )
