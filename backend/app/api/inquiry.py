@@ -97,6 +97,7 @@ async def extract_text(
 
         product_name = item["product_name"]
         quantity = item["quantity"]
+        print("CURRENT USER COMPANY ID:", current_user.company_id)
 
         # -----------------------------------------------------
         # Generate embedding for individual product

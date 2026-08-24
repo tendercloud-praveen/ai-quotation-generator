@@ -96,7 +96,7 @@ def search_product_by_embedding(
     db.query(Product)
     .filter(
         Product.id.in_(product_ids),
-        Product.company_id == company_id
+        # Product.company_id == company_id
     )
     .all()
 )
