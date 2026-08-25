@@ -2117,7 +2117,7 @@ const result = await extractInquiryTextApi(text);
 
           const gstAmount = (itemSubtotal * gstPercentage) / 100;
 
-          const totalPrice = itemSubtotal + gstAmount;
+          const totalPrice = itemSubtotal;
 
           return {
             product_id: Number(line.productId),

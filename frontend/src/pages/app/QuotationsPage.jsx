@@ -1290,7 +1290,7 @@ function QuotationDetail({ q, customers, inquiries, user }) {
                 </td>
 
                 <td className="px-4 py-2 text-right font-semibold">
-                  {formatINR(line.total)}
+                  {formatINR(line.subtotal)}
                 </td>
               </tr>
             ))}

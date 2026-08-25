@@ -26,7 +26,7 @@ def calculate_product_total(product, quantity):
     gst_amount = subtotal * (gst_percentage / 100)
 
     # Final price including GST
-    total_price = subtotal + gst_amount
+    total_price = subtotal 
 
     return {
         "product_id": product.id,
