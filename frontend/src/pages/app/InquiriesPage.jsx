@@ -344,16 +344,17 @@ export default function InquiriesPage() {
          SIMILAR PRODUCTS
       ================================================= */
 
-      const similarProducts = matchResult.similar_products || [];
+      const backendProducts = matchResult.products || [];
 
       const confidence =
-        similarProducts.length > 0 ? Number(similarProducts[0].score || 0) : 0;
+        backendProducts.length > 0
+          ? Number(backendProducts[0].confidence_score || 0)
+          : 0;
 
       /* =================================================
          PRODUCTS FROM BACKEND
       ================================================= */
 
-      const backendProducts = matchResult.products || [];
 
       /* =================================================
          ITEMS FROM BACKEND
@@ -402,7 +403,7 @@ export default function InquiriesPage() {
 
           const gstAmount = (subtotal * gstPercentage) / 100;
 
-          const total = subtotal + gstAmount;
+          const total = subtotal;
 
           return {
             productId: item.product_id,
@@ -557,7 +558,7 @@ export default function InquiriesPage() {
 
         const gstAmount = (subtotal * gstPercentage) / 100;
 
-        const total = subtotal + gstAmount;
+        const total = subtotal;
 
         next.subtotal = Number(subtotal.toFixed(2));
 
@@ -676,6 +677,9 @@ export default function InquiriesPage() {
 
         inquiry_text: form.text.trim(),
 
+
+        ai_confidence: aiResult?.confidence ?? 0,
+
         summary: {
           subtotal: subtotal,
 
@@ -695,7 +699,7 @@ export default function InquiriesPage() {
 
           const gstAmount = (itemSubtotal * gstPercentage) / 100;
 
-          const totalPrice = itemSubtotal + gstAmount;
+          const totalPrice = itemSubtotal;
 
           return {
             product_id: Number(line.productId),
