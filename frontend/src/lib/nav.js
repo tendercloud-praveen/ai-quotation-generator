@@ -91,12 +91,12 @@ export const NAV_ITEMS = [
     icon: Sparkles,
     roles: ["sales_rep"],
   },
-  {
-    to: "/app/inquiries?filter=my",
-    label: "My Inquiries",
-    icon: FileText,
-    roles: ["sales_rep"],
-  },
+  // {
+  //   to: "/app/inquiries?filter=my",
+  //   label: "My Inquiries",
+  //   icon: FileText,
+  //   roles: ["sales_rep"],
+  // },
   {
     to: "/app/quotations?filter=my",
     label: "My Quotations",
