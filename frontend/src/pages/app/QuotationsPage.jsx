@@ -202,7 +202,9 @@ export default function QuotationsPage() {
 
           comments: "",
 
-          aiMatch: null,
+          aiMatch: {
+          confidence: Number(q.ai_confidence),
+          },
         }));
 
         setQuotations(formattedQuotations);
