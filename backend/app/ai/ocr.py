@@ -114,6 +114,19 @@ async def process_input(
             df = pd.read_excel(excel_file)
             
             extracted_text = df.to_string(index=False)
+        elif file.content_type in [
+    "text/csv",
+    "application/csv"
+]:
+            print("Processing CSV file...")
+            
+            csv_file = io.BytesIO(content)
+            
+            df = pd.read_csv(csv_file)
+            
+            extracted_text = df.to_string(index=False)
+            
+    
 
     
 
