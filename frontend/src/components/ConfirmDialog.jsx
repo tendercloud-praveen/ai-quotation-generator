@@ -15,7 +15,7 @@ export function ConfirmDialog({
         onClick={onClose}
       />
       <div className="relative w-full max-w-sm rounded-2xl bg-white dark:bg-slate-900 shadow-2xl border border-slate-200 dark:border-slate-800 p-6 animate-scale-in">
-        <h3 className="font-semibold text-lg text-slate-800 dark:text-slate-100">
+        <h3 className="font-display font-semibold text-lg text-slate-800 dark:text-slate-100">
           {title}
         </h3>
         <p className="mt-2 text-sm text-slate-500 dark:text-slate-400">

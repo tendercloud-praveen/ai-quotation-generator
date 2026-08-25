@@ -16,10 +16,10 @@ export default function Modal({ open, onClose, title, subtitle, size = 'md', chi
   return (
     <div className="fixed inset-0 z-50 flex items-end sm:items-center justify-center p-0 sm:p-4">
       <div className="absolute inset-0 bg-slate-900/50 backdrop-blur-sm animate-fade-in" onClick={onClose} />
-      <div className={`relative w-full ${sizes[size]} bg-white dark:bg-slate-900 rounded-t-2xl sm:rounded-2xl shadow-2xl border border-slate-200 dark:border-slate-800 animate-slide-up max-h-[92vh] flex flex-col`}>
+      <div className={`relative w-full ${sizes[size]} bg-white dark:bg-slate-900 rounded-t-2xl sm:rounded-xl2 shadow-2xl border border-slate-200 dark:border-slate-800 animate-slide-up max-h-[92vh] flex flex-col`}>
         <div className="flex items-start justify-between gap-3 px-6 py-4 border-b border-slate-100 dark:border-slate-800">
           <div>
-            <h3 className="font-semibold text-lg text-slate-800 dark:text-slate-100">{title}</h3>
+            <h3 className="font-display font-semibold text-lg text-slate-800 dark:text-slate-100">{title}</h3>
             {subtitle && <p className="text-sm text-slate-500 dark:text-slate-400 mt-0.5">{subtitle}</p>}
           </div>
           <button onClick={onClose} className="p-1.5 rounded-lg text-slate-400 hover:bg-slate-100 dark:hover:bg-slate-800 hover:text-slate-600 transition">
