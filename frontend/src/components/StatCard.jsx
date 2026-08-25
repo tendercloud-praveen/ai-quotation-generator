@@ -10,14 +10,14 @@ export default function StatCard({ label, value, icon: Icon, tone = 'brand', tre
     accent: 'bg-teal-50 text-teal-600 dark:bg-teal-950/50 dark:text-teal-300',
   };
   return (
-    <div className="rounded-xl bg-white border border-slate-200/70 shadow-sm dark:bg-slate-900 dark:border-slate-800 p-5 hover:shadow-md hover:-translate-y-0.5 transition-all duration-200 animate-slide-up">
+    <div className="rounded-xl2 bg-white border border-slate-200/70 shadow-card dark:bg-slate-900 dark:border-slate-800 p-5 hover:shadow-md hover:-translate-y-0.5 transition-all duration-200 animate-slide-up">
       <div className="flex items-start justify-between">
         <div>
           <p className="text-sm font-medium text-slate-500 dark:text-slate-400">{label}</p>
-          <p className="mt-2 text-2xl font-bold text-slate-800 dark:text-slate-100 tracking-tight">{value}</p>
+          <p className="mt-2 text-2xl font-sans font-bold text-slate-800 dark:text-slate-100 tracking-tight tabular-nums">{value}</p>
           {hint && <p className="mt-1 text-xs text-slate-400">{hint}</p>}
         </div>
-        <div className={`grid place-items-center h-11 w-11 rounded-xl ${tones[tone]}`}>
+        <div className={`grid place-items-center h-11 w-11 rounded-full ${tones[tone]}`}>
           {Icon && <Icon size={22} />}
         </div>
       </div>

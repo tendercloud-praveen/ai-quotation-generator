@@ -188,8 +188,6 @@ export default function QuotationsPage() {
 
           margin: q.margin,
 
-          ai_confidence: q.ai_confidence,
-
           status: q.status?.toLowerCase(),
 
           assignedManagerId: q.manager_id,
@@ -1241,9 +1239,7 @@ function QuotationDetail({ q, customers, inquiries, user }) {
           <p className="text-xs text-slate-400">AI Confidence</p>
 
           <p className="font-medium">
-            {q.ai_confidence !== null && q.ai_confidence !== undefined
-              ? `${Math.round(q.ai_confidence * 100)}%`
-              : "—"}
+            {q.aiMatch ? `${Math.round(q.aiMatch.confidence * 100)}%` : "—"}
           </p>
         </div>
       </div>

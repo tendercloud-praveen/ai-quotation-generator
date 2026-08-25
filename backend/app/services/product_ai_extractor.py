@@ -24,11 +24,46 @@ def extract_products_with_ai(text: str):
     )
 
     prompt = f"""
-You are a product data extraction system.
+You are a highly accurate product table extraction system.
 
-Extract all products from the following document.
+Your job is to extract EVERY individual product/item from the document.
 
-The document may use different field names.
+========================
+CRITICAL RULES
+========================
+
+1. Extract EVERY product in the document.
+
+2. There is NO fixed product limit.
+
+3. If there are 10 products, return 10.
+
+4. If there are 100 products, return 100.
+
+5. If there are 500 products, return all products that can be
+   reliably extracted from the document.
+
+6. NEVER intentionally stop after 10, 20, or any other number.
+
+For example, if the document contains:
+
+Pumps
+AquaPrime Booster Pump 2HP
+BULK-PDF-1001
+7200
+
+Then:
+
+category = "Pumps"
+product_name = "AquaPrime Booster Pump 2HP"
+
+NOT:
+
+product_name = "Pumps"
+
+========================
+FIELD MAPPING
+========================
 
 SKU fields:
 - SKU
@@ -43,6 +78,7 @@ Product Name fields:
 - Product
 - Item
 - Material
+- Material Name
 
 Description fields:
 - Description
@@ -83,87 +119,145 @@ Cost Price fields:
 - Buying Price
 
 
-IMPORTANT DESCRIPTION RULE:
+========================
+CATEGORY RULE
+========================
 
-1. First check whether the document already contains a description,
-   details, specification, or similar information.
+If category is explicitly present, use it.
 
-2. If a description is available:
-   - Keep the original description/information.
-   - Do not unnecessarily change it.
-   - Do not invent additional specifications.
-
-3. If description is NOT available:
-   - Create a short useful description using the product name
-     and other information available in the document.
-   - Do not invent technical specifications.
-   - Do not invent brand, model, size, color, material, or other
-     information that is not present.
-
-
-IMPORTANT CATEGORY RULE — MUST FOLLOW:
-
-If the document does not explicitly provide a category, you MUST determine
-the category from the product_name, description, and product details.
-
-DO NOT return "General" when the product can be reasonably categorized.
+If category is NOT explicitly present, determine a reasonable category
+from the product name and description.
 
 Examples:
 
-Laptop, HP Laptop, Dell Laptop, Computer, Desktop, Monitor,
-Keyboard, Mouse, Printer, Mobile Phone, SSD, Hard Disk
+Laptop, Computer, Monitor, Keyboard, Mouse, Printer
 → Electronics
-
-Office Chair, Table, Desk, Sofa, Cupboard
-→ Furniture
-
-T-Shirt, Shirt, Jeans, Shoes, Dress
-→ Clothing
 
 Cement, Steel, Bricks, Paint, Sand
 → Construction Materials
 
-Rice, Sugar, Oil, Biscuits, Food Items
-→ Food & Grocery
+Pump, Water Pump, Booster Pump
+→ Pumps / Water Equipment
 
-Shampoo, Soap, Toothpaste, Face Wash
-→ Personal Care
+Pipe, Elbow, Coupler, Plumbing Fitting
+→ Plumbing
 
-CRITICAL EXAMPLE:
+Safety Vest, Helmet, Safety Shoes
+→ Safety Equipment
 
-Input:
-Product Name: HP Laptop
-Description: 15.6 inch business laptop
+DO NOT use "General" if a reasonable category can be determined.
 
-Correct category:
-"Electronics"
+Use "General" ONLY when the category genuinely cannot be determined.
 
-Returning "General" for a Laptop is INCORRECT.
 
-Use "General" ONLY when you genuinely cannot determine any reasonable
-category from the product name or description.
+========================
+DESCRIPTION RULE
+========================
+
+If the document contains a description, specification, or details:
+- Preserve that information.
+- Do not invent information.
+
+If no description exists:
+- Create a short description using only information available
+  in the document.
+- Do not invent brand, model, size, color, material, or specifications.
+
+
+========================
+IMPORTANT TABLE RULE
+========================
+
+When the document contains a table:
+
+Read the table row by row.
+
+EVERY PRODUCT ROW MUST BE EXTRACTED.
+
+Do not treat:
+- section headings
+- category headings
+- column headers
+- page headers
+- page footers
+- company names
+- addresses
+- totals
+
+as products.
+
+If a category heading appears above several products, apply that category
+to the products underneath it.
+
+Example:
+
+Pumps
+1 | BULK-001 | AquaPrime Booster Pump 2HP | Nos | 7200
+2 | BULK-002 | AquaPrime Water Pump 1HP | Nos | 4500
+
+Correct result:
+
+[
+    {{
+        "sku": "BULK-001",
+        "product_name": "AquaPrime Booster Pump 2HP",
+        "category": "Pumps"
+    }},
+    {{
+        "sku": "BULK-002",
+        "product_name": "AquaPrime Water Pump 1HP",
+        "category": "Pumps"
+    }}
+]
+
+NOT:
+
+[
+    {{
+        "product_name": "Pumps"
+    }}
+]
+
+
+========================
+FINAL CHECK BEFORE RESPONSE
+========================
+
+Before returning JSON:
+
+1. Count every product row in the document.
+2. Make sure every product row has a JSON object.
+3. Make sure category headings are NOT product names.
+4. Make sure duplicate products are not accidentally created.
+5. Do not omit products because some fields are missing.
+6. Missing fields must still produce a product object.
+
+Return ONLY valid JSON.
 
 Use exactly this format:
 
 [
     {{
-        "sku": "string",
-        "product_name": "string",
-        "description": "string",
-        "unit": "string",
+        "sku": "",
+        "product_name": "",
+        "description": "",
+        "unit": "",
         "selling_price": 0.0,
         "gst_percentage": 0.0,
-        "category": "string",
+        "category": "",
         "cost_price": 0.0
     }}
 ]
 
-If a field is not available:
+If a string field is unavailable:
+""
 
-- string fields → ""
-- numeric fields → 0
+If a numeric field is unavailable:
+0
 
-Document text:
+========================
+DOCUMENT TEXT
+========================
 
 {text}
 """
@@ -172,7 +266,6 @@ Document text:
 
     result = response.content.strip()
 
-    # Remove markdown code block if AI returns ```json
     if result.startswith("```json"):
         result = result.replace("```json", "", 1)
 
@@ -191,5 +284,23 @@ Document text:
         raise ValueError(
             "AI could not return valid product JSON"
         )
+
+    if not isinstance(products, list):
+        raise ValueError(
+            "AI response must be a list of products"
+        )
+
+    print("========== AI PRODUCT EXTRACTION ==========")
+    print("Total products extracted:", len(products))
+
+    for index, product in enumerate(products, start=1):
+        print(
+            f"{index}. "
+            f"{product.get('product_name')} | "
+            f"{product.get('category')} | "
+            f"{product.get('sku')}"
+        )
+
+    print("===========================================")
 
     return products
