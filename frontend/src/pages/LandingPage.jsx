@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useState, useEffect, useRef } from 'react';
 import { Link } from 'react-router-dom';
 import {
   Sparkles, FileText, ShieldCheck, BarChart3, Bell, Users, Zap,
@@ -63,6 +63,81 @@ function FaqItem({ item }) {
   );
 }
 
+// Lightweight scroll-reveal wrapper: fades + slides content up the first time it enters the viewport.
+function Reveal({ children, delay = 0, className = '' }) {
+  const ref = useRef(null);
+  const [visible, setVisible] = useState(false);
+
+  useEffect(() => {
+    const node = ref.current;
+    if (!node) return;
+    const observer = new IntersectionObserver(
+      ([entry]) => {
+        if (entry.isIntersecting) {
+          setVisible(true);
+          observer.disconnect();
+        }
+      },
+      { threshold: 0.15 }
+    );
+    observer.observe(node);
+    return () => observer.disconnect();
+  }, []);
+
+  return (
+    <div
+      ref={ref}
+      className={`transition-all duration-700 ease-out ${visible ? 'opacity-100 translate-y-0' : 'opacity-0 translate-y-6'} ${className}`}
+      style={{ transitionDelay: visible ? `${delay}ms` : '0ms' }}
+    >
+      {children}
+    </div>
+  );
+}
+
+// Animates a stat value up from 0 once it scrolls into view. Falls back to the plain string
+// for values that aren't purely numeric (keeps any prefix/suffix like "x", "%", "/7").
+function CountUp({ value, duration = 1400 }) {
+  const ref = useRef(null);
+  const [display, setDisplay] = useState(null);
+
+  useEffect(() => {
+    const match = String(value).match(/^([^\d]*)(\d+(?:\.\d+)?)(.*)$/);
+    if (!match) {
+      setDisplay(value);
+      return;
+    }
+    const [, prefix, numStr, suffix] = match;
+    const target = parseFloat(numStr);
+    const decimals = numStr.includes('.') ? numStr.split('.')[1].length : 0;
+    const node = ref.current;
+    let started = false;
+
+    const observer = new IntersectionObserver(
+      ([entry]) => {
+        if (entry.isIntersecting && !started) {
+          started = true;
+          const start = performance.now();
+          const tick = (now) => {
+            const progress = Math.min((now - start) / duration, 1);
+            const eased = 1 - Math.pow(1 - progress, 3);
+            const current = (target * eased).toFixed(decimals);
+            setDisplay(`${prefix}${current}${suffix}`);
+            if (progress < 1) requestAnimationFrame(tick);
+          };
+          requestAnimationFrame(tick);
+          observer.disconnect();
+        }
+      },
+      { threshold: 0.4 }
+    );
+    if (node) observer.observe(node);
+    return () => observer.disconnect();
+  }, [value, duration]);
+
+  return <span ref={ref}>{display ?? String(value).replace(/\d/g, '0')}</span>;
+}
+
 export default function LandingPage() {
   const { theme, toggle } = useTheme();
   const [mobileOpen, setMobileOpen] = useState(false);
@@ -112,25 +187,27 @@ export default function LandingPage() {
       {/* Hero */}
       <section className="relative overflow-hidden">
         <div className="absolute inset-0 opacity-30 dark:opacity-20" style={{ backgroundImage: 'radial-gradient(circle at 20% 20%, #3385ff 0, transparent 40%), radial-gradient(circle at 80% 60%, #22c55e 0, transparent 35%)' }} />
+        <div aria-hidden="true" className="pointer-events-none absolute -top-24 -left-16 h-72 w-72 rounded-full bg-brand-400/20 blur-3xl animate-float" />
+        <div aria-hidden="true" className="pointer-events-none absolute top-10 right-0 h-80 w-80 rounded-full bg-emerald-400/20 blur-3xl animate-float-slow" />
         <div className="relative max-w-7xl mx-auto px-4 sm:px-6 py-20 sm:py-28 text-center">
-          <div className="inline-flex items-center gap-2 px-3 py-1.5 rounded-full bg-brand-50 dark:bg-brand-950/40 border border-brand-200 dark:border-brand-800 text-brand-700 dark:text-brand-300 text-xs font-semibold mb-6">
+          <div className="inline-flex items-center gap-2 px-3 py-1.5 rounded-full bg-brand-50 dark:bg-brand-950/40 border border-brand-200 dark:border-brand-800 text-brand-700 dark:text-brand-300 text-xs font-semibold mb-6 animate-slide-up">
             <Zap size={14} /> AI-powered quotation engine
           </div>
-          <h1 className="text-4xl sm:text-6xl font-bold tracking-tight text-slate-900 dark:text-white max-w-3xl mx-auto leading-tight">
-            Generate accurate quotations in <span className="bg-gradient-to-r from-brand-600 to-emerald-500 bg-clip-text text-transparent">seconds</span>, not hours.
+          <h1 className="text-4xl sm:text-6xl font-display font-semibold tracking-tight text-slate-900 dark:text-white max-w-3xl mx-auto leading-tight animate-slide-up" style={{ animationDelay: '80ms', animationFillMode: 'backwards' }}>
+            Generate accurate quotations in <span className="bg-gradient-to-r from-brand-600 via-emerald-500 to-brand-600 bg-[length:200%_auto] bg-clip-text text-transparent animate-gradient-pan">seconds</span>, not hours.
           </h1>
-          <p className="mt-6 text-lg text-slate-600 dark:text-slate-400 max-w-2xl mx-auto">
+          <p className="mt-6 text-lg text-slate-600 dark:text-slate-400 max-w-2xl mx-auto animate-slide-up" style={{ animationDelay: '160ms', animationFillMode: 'backwards' }}>
             QuotaAI streamlines the entire quotation workflow for modern manufacturers — from AI-powered product matching to multi-role approvals, notifications, and PDF dispatch.
           </p>
-          <div className="mt-8 flex flex-col sm:flex-row items-center justify-center gap-3">
-            <Link to="/signup" className="inline-flex items-center gap-2 px-6 py-3 rounded-xl bg-brand-600 text-white font-semibold hover:bg-brand-700 transition shadow-lg shadow-brand-600/20">
+          <div className="mt-8 flex flex-col sm:flex-row items-center justify-center gap-3 animate-slide-up" style={{ animationDelay: '240ms', animationFillMode: 'backwards' }}>
+            <Link to="/signup" className="inline-flex items-center gap-2 px-6 py-3 rounded-xl bg-brand-600 text-white font-semibold hover:bg-brand-700 hover:shadow-xl hover:-translate-y-0.5 transition shadow-lg shadow-brand-600/20">
               Start free <ArrowRight size={18} />
             </Link>
-            <Link to="/login" className="inline-flex items-center gap-2 px-6 py-3 rounded-xl border border-slate-300 dark:border-slate-700 font-semibold text-slate-700 dark:text-slate-200 hover:bg-slate-50 dark:hover:bg-slate-800 transition">
+            <Link to="/login" className="inline-flex items-center gap-2 px-6 py-3 rounded-xl border border-slate-300 dark:border-slate-700 font-semibold text-slate-700 dark:text-slate-200 hover:bg-slate-50 dark:hover:bg-slate-800 hover:-translate-y-0.5 transition">
               Sign in
             </Link>
           </div>
-          <div className="mt-10 flex items-center justify-center gap-6 text-sm text-slate-500 dark:text-slate-400">
+          <div className="mt-10 flex items-center justify-center gap-6 text-sm text-slate-500 dark:text-slate-400 animate-slide-up" style={{ animationDelay: '320ms', animationFillMode: 'backwards' }}>
             <span className="flex items-center gap-1.5"><CheckCircle2 size={16} className="text-emerald-500" /> No credit card</span>
             <span className="flex items-center gap-1.5"><CheckCircle2 size={16} className="text-emerald-500" /> Setup in minutes</span>
             <span className="flex items-center gap-1.5"><CheckCircle2 size={16} className="text-emerald-500" /> Role-based access</span>
@@ -141,30 +218,34 @@ export default function LandingPage() {
       {/* Stats */}
       <section className="border-y border-slate-200 dark:border-slate-800 bg-slate-50 dark:bg-slate-900/50">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 py-12 grid grid-cols-2 lg:grid-cols-4 gap-8">
-          {STATS.map((s) => (
-            <div key={s.label} className="text-center">
-              <p className="text-3xl sm:text-4xl font-bold bg-gradient-to-r from-brand-600 to-emerald-500 bg-clip-text text-transparent">{s.value}</p>
+          {STATS.map((s, i) => (
+            <Reveal key={s.label} delay={i * 90} className="text-center">
+              <p className="text-3xl sm:text-4xl font-bold bg-gradient-to-r from-brand-600 to-emerald-500 bg-clip-text text-transparent tabular-nums">
+                <CountUp value={s.value} />
+              </p>
               <p className="mt-1 text-sm text-slate-500 dark:text-slate-400">{s.label}</p>
-            </div>
+            </Reveal>
           ))}
         </div>
       </section>
 
       {/* Features */}
       <section id="features" className="max-w-7xl mx-auto px-4 sm:px-6 py-20">
-        <div className="text-center max-w-2xl mx-auto mb-12">
-          <h2 className="text-3xl sm:text-4xl font-bold tracking-tight">Everything you need to close deals faster</h2>
+        <Reveal className="text-center max-w-2xl mx-auto mb-12">
+          <h2 className="text-3xl sm:text-4xl font-display font-semibold tracking-tight">Everything you need to close deals faster</h2>
           <p className="mt-4 text-slate-600 dark:text-slate-400">A complete quotation platform built for modern manufacturing teams.</p>
-        </div>
+        </Reveal>
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-          {FEATURES.map((f) => (
-            <div key={f.title} className="group rounded-2xl bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 p-6 hover:shadow-xl hover:border-brand-300 dark:hover:border-brand-700 transition-all">
-              <div className="grid place-items-center h-12 w-12 rounded-xl bg-brand-50 dark:bg-brand-950/50 text-brand-600 dark:text-brand-400 mb-4 group-hover:scale-110 transition-transform">
-                <f.icon size={24} />
+          {FEATURES.map((f, i) => (
+            <Reveal key={f.title} delay={(i % 3) * 100}>
+              <div className="group rounded-2xl bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 p-6 hover:shadow-xl hover:border-brand-300 dark:hover:border-brand-700 hover:-translate-y-1 transition-all">
+                <div className="grid place-items-center h-12 w-12 rounded-xl bg-brand-50 dark:bg-brand-950/50 text-brand-600 dark:text-brand-400 mb-4 group-hover:scale-110 group-hover:rotate-3 transition-transform">
+                  <f.icon size={24} />
+                </div>
+                <h3 className="text-lg font-semibold text-slate-800 dark:text-slate-100">{f.title}</h3>
+                <p className="mt-2 text-sm text-slate-600 dark:text-slate-400 leading-relaxed">{f.desc}</p>
               </div>
-              <h3 className="text-lg font-semibold text-slate-800 dark:text-slate-100">{f.title}</h3>
-              <p className="mt-2 text-sm text-slate-600 dark:text-slate-400 leading-relaxed">{f.desc}</p>
-            </div>
+            </Reveal>
           ))}
         </div>
       </section>
@@ -172,19 +253,19 @@ export default function LandingPage() {
       {/* Workflow */}
       <section id="workflow" className="bg-slate-50 dark:bg-slate-900/50 border-y border-slate-200 dark:border-slate-800">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 py-20">
-          <div className="text-center max-w-2xl mx-auto mb-12">
+          <Reveal className="text-center max-w-2xl mx-auto mb-12">
             <div className="inline-flex items-center gap-2 px-3 py-1.5 rounded-full bg-brand-50 dark:bg-brand-950/40 text-brand-700 dark:text-brand-300 text-xs font-semibold mb-4">
               <Workflow size={14} /> The workflow
             </div>
-            <h2 className="text-3xl sm:text-4xl font-bold tracking-tight">From inquiry to dispatch in five steps</h2>
-          </div>
+            <h2 className="text-3xl sm:text-4xl font-display font-semibold tracking-tight">From inquiry to dispatch in five steps</h2>
+          </Reveal>
           <div className="grid grid-cols-1 md:grid-cols-5 gap-4">
             {STEPS.map((s, i) => (
-              <div key={s.title} className="relative">
-                <div className="rounded-2xl bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 p-5 h-full">
+              <Reveal key={s.title} delay={i * 110} className="relative">
+                <div className="group rounded-2xl bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 p-5 h-full hover:shadow-lg hover:border-brand-300 dark:hover:border-brand-700 transition-all">
                   <div className="flex items-center justify-between mb-3">
-                    <div className="grid place-items-center h-10 w-10 rounded-xl bg-brand-600 text-white"><s.icon size={20} /></div>
-                    <span className="text-2xl font-bold text-slate-200 dark:text-slate-700">{i + 1}</span>
+                    <div className="grid place-items-center h-10 w-10 rounded-xl bg-brand-600 text-white group-hover:scale-110 transition-transform"><s.icon size={20} /></div>
+                    <span className="text-2xl font-bold text-slate-200 dark:text-slate-700 tabular-nums">{i + 1}</span>
                   </div>
                   <h3 className="font-semibold text-slate-800 dark:text-slate-100">{s.title}</h3>
                   <p className="mt-1 text-xs text-slate-500 dark:text-slate-400 leading-relaxed">{s.desc}</p>
@@ -194,7 +275,7 @@ export default function LandingPage() {
                     <ArrowRight size={18} />
                   </div>
                 )}
-              </div>
+              </Reveal>
             ))}
           </div>
         </div>
@@ -202,27 +283,29 @@ export default function LandingPage() {
 
       {/* Testimonials */}
       <section id="testimonials" className="max-w-7xl mx-auto px-4 sm:px-6 py-20">
-        <div className="text-center max-w-2xl mx-auto mb-12">
-          <h2 className="text-3xl sm:text-4xl font-bold tracking-tight">Loved by manufacturing teams</h2>
+        <Reveal className="text-center max-w-2xl mx-auto mb-12">
+          <h2 className="text-3xl sm:text-4xl font-display font-semibold tracking-tight">Loved by manufacturing teams</h2>
           <p className="mt-4 text-slate-600 dark:text-slate-400">See what our customers have to say.</p>
-        </div>
+        </Reveal>
         <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
-          {TESTIMONIALS.map((t) => (
-            <div key={t.name} className="rounded-2xl bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 p-6">
-              <div className="flex gap-0.5 mb-4">
-                {Array.from({ length: t.rating }).map((_, i) => <Star key={i} size={16} className="fill-amber-400 text-amber-400" />)}
-              </div>
-              <p className="text-sm text-slate-600 dark:text-slate-300 leading-relaxed italic">"{t.quote}"</p>
-              <div className="mt-5 flex items-center gap-3">
-                <div className="grid place-items-center h-10 w-10 rounded-full bg-brand-100 dark:bg-brand-950 text-brand-700 dark:text-brand-300 font-semibold">
-                  {t.name.split(' ').map((n) => n[0]).join('')}
+          {TESTIMONIALS.map((t, i) => (
+            <Reveal key={t.name} delay={i * 110}>
+              <div className="rounded-2xl bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 p-6 hover:shadow-lg hover:-translate-y-1 transition-all">
+                <div className="flex gap-0.5 mb-4">
+                  {Array.from({ length: t.rating }).map((_, i) => <Star key={i} size={16} className="fill-amber-400 text-amber-400" />)}
                 </div>
-                <div>
-                  <p className="text-sm font-semibold text-slate-800 dark:text-slate-100">{t.name}</p>
-                  <p className="text-xs text-slate-500 dark:text-slate-400">{t.role}</p>
+                <p className="text-sm text-slate-600 dark:text-slate-300 leading-relaxed italic">"{t.quote}"</p>
+                <div className="mt-5 flex items-center gap-3">
+                  <div className="grid place-items-center h-10 w-10 rounded-full bg-brand-100 dark:bg-brand-950 text-brand-700 dark:text-brand-300 font-semibold">
+                    {t.name.split(' ').map((n) => n[0]).join('')}
+                  </div>
+                  <div>
+                    <p className="text-sm font-semibold text-slate-800 dark:text-slate-100">{t.name}</p>
+                    <p className="text-xs text-slate-500 dark:text-slate-400">{t.role}</p>
+                  </div>
                 </div>
               </div>
-            </div>
+            </Reveal>
           ))}
         </div>
       </section>
@@ -230,33 +313,40 @@ export default function LandingPage() {
       {/* FAQ */}
       <section id="faq" className="bg-slate-50 dark:bg-slate-900/50 border-y border-slate-200 dark:border-slate-800">
         <div className="max-w-3xl mx-auto px-4 sm:px-6 py-20">
-          <div className="text-center mb-10">
-            <h2 className="text-3xl sm:text-4xl font-bold tracking-tight">Frequently asked questions</h2>
-          </div>
+          <Reveal className="text-center mb-10">
+            <h2 className="text-3xl sm:text-4xl font-display font-semibold tracking-tight">Frequently asked questions</h2>
+          </Reveal>
           <div className="space-y-3">
-            {FAQS.map((item) => <FaqItem key={item.q} item={item} />)}
+            {FAQS.map((item, i) => (
+              <Reveal key={item.q} delay={i * 60}>
+                <FaqItem item={item} />
+              </Reveal>
+            ))}
           </div>
         </div>
       </section>
 
       {/* Contact */}
       <section id="contact" className="max-w-7xl mx-auto px-4 sm:px-6 py-20">
-        <div className="rounded-3xl bg-gradient-to-br from-brand-600 via-brand-700 to-brand-800 p-8 sm:p-12 text-center text-white relative overflow-hidden">
-          <div className="absolute inset-0 opacity-20" style={{ backgroundImage: 'radial-gradient(circle at 20% 30%, white 0, transparent 40%), radial-gradient(circle at 80% 70%, white 0, transparent 35%)' }} />
-          <div className="relative">
-            <MessageSquare size={32} className="mx-auto mb-4" />
-            <h2 className="text-3xl sm:text-4xl font-bold">Ready to transform your quotation process?</h2>
-            <p className="mt-3 text-brand-100 max-w-xl mx-auto">Get started in minutes. Create your company account and invite your team.</p>
-            <div className="mt-8 flex flex-col sm:flex-row items-center justify-center gap-3">
-              <Link to="/signup" className="inline-flex items-center gap-2 px-6 py-3 rounded-xl bg-white text-brand-700 font-semibold hover:bg-brand-50 transition shadow-lg">
-                Create your account <ArrowRight size={18} />
-              </Link>
-              <a href="mailto:hello@quotaai.app" className="inline-flex items-center gap-2 px-6 py-3 rounded-xl border border-white/30 text-white font-semibold hover:bg-white/10 transition">
-                Contact sales
-              </a>
+        <Reveal>
+          <div className="rounded-3xl bg-gradient-to-br from-brand-600 via-brand-700 to-brand-800 p-8 sm:p-12 text-center text-white relative overflow-hidden">
+            <div className="absolute inset-0 opacity-20" style={{ backgroundImage: 'radial-gradient(circle at 20% 30%, white 0, transparent 40%), radial-gradient(circle at 80% 70%, white 0, transparent 35%)' }} />
+            <div aria-hidden="true" className="pointer-events-none absolute -bottom-10 -right-10 h-56 w-56 rounded-full bg-white/10 blur-3xl animate-float-slow" />
+            <div className="relative">
+              <MessageSquare size={32} className="mx-auto mb-4" />
+              <h2 className="text-3xl sm:text-4xl font-display font-semibold">Ready to transform your quotation process?</h2>
+              <p className="mt-3 text-brand-100 max-w-xl mx-auto">Get started in minutes. Create your company account and invite your team.</p>
+              <div className="mt-8 flex flex-col sm:flex-row items-center justify-center gap-3">
+                <Link to="/signup" className="inline-flex items-center gap-2 px-6 py-3 rounded-xl bg-white text-brand-700 font-semibold hover:bg-brand-50 hover:-translate-y-0.5 transition shadow-lg">
+                  Create your account <ArrowRight size={18} />
+                </Link>
+                <a href="mailto:hello@quotaai.app" className="inline-flex items-center gap-2 px-6 py-3 rounded-xl border border-white/30 text-white font-semibold hover:bg-white/10 hover:-translate-y-0.5 transition">
+                  Contact sales
+                </a>
+              </div>
             </div>
           </div>
-        </div>
+        </Reveal>
       </section>
 
       {/* Footer */}

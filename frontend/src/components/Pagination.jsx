@@ -19,7 +19,7 @@ export default function Pagination({ page, pageCount, onChange }) {
         {start > 1 && <button onClick={() => onChange(1)} className="px-3 py-1.5 rounded-xl hover:bg-slate-100 dark:hover:bg-slate-800 text-slate-600 dark:text-slate-300 transition">1</button>}
         {start > 2 && <span className="px-1 text-slate-400">…</span>}
         {pages.map((p) => (
-          <button key={p} onClick={() => onChange(p)} className={`px-3 py-1.5 rounded-xl font-medium transition ${p === page ? 'bg-brand-600 text-white shadow-sm' : 'hover:bg-slate-100 dark:hover:bg-slate-800 text-slate-600 dark:text-slate-300'}`}>
+          <button key={p} onClick={() => onChange(p)} className={`px-3 py-1.5 rounded-full font-medium transition ${p === page ? 'bg-brand-600 text-white shadow-sm' : 'hover:bg-slate-100 dark:hover:bg-slate-800 text-slate-600 dark:text-slate-300'}`}>
             {p}
           </button>
         ))}

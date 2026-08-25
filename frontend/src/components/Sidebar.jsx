@@ -44,7 +44,7 @@ export default function Sidebar({ open, onClose }) {
             <div className="grid place-items-center h-9 w-9 rounded-xl bg-gradient-to-br from-brand-500 to-brand-700 text-white shadow-sm shadow-brand-600/30">
               <Sparkles size={20} />
             </div>
-            <span className="text-lg font-bold tracking-tight text-slate-800 dark:text-slate-100">
+            <span className="text-lg font-display font-semibold tracking-tight text-slate-800 dark:text-slate-100">
               QuotaAI
             </span>
           </div>
@@ -68,7 +68,7 @@ export default function Sidebar({ open, onClose }) {
                 key={item.to}
                 to={item.to}
                 onClick={onClose}
-                className={`group flex items-center gap-3 px-3 py-2.5 rounded-xl text-sm font-medium transition-all duration-200 ${
+                className={`group flex items-center gap-3 px-3 py-2.5 rounded-full text-sm font-medium transition-all duration-200 ${
                   active
                     ? "bg-brand-600 text-white shadow-sm shadow-brand-600/30"
                     : "text-slate-600 dark:text-slate-300 hover:bg-slate-100 dark:hover:bg-slate-800 hover:text-slate-900 dark:hover:text-white hover:translate-x-0.5"
