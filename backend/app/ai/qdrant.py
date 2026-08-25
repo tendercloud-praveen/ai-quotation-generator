@@ -46,6 +46,8 @@ def store_product_embedding(
     embedding,
     search_text
 ):
+    company_id = int(company_id)
+    product_id = int(product_id)
 
     client.upsert(
         collection_name=COLLECTION_NAME,
