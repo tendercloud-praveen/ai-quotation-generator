@@ -652,24 +652,26 @@ export default function QuotationsPage() {
       ),
     },
 
-    {
-      key: "margin",
+    ...(effectiveRole === "admin" || effectiveRole === "manager"
+      ? [
+          {
+            key: "margin",
+            header: "Margin",
+            render: (q) => {
+              const margin = q.lines.reduce(
+                (sum, line) => sum + Number(line.margin || 0),
+                0,
+              );
 
-      header: "Margin",
-
-      render: (q) => {
-        const margin = q.lines.reduce(
-          (sum, line) => sum + Number(line.margin || 0),
-          0,
-        );
-
-        return (
-          <span className="text-emerald-600 dark:text-emerald-400 font-medium">
-            {formatINR(margin)}
-          </span>
-        );
-      },
-    },
+              return (
+                <span className="text-emerald-600 dark:text-emerald-400 font-medium">
+                  {formatINR(margin)}
+                </span>
+              );
+            },
+          },
+        ]
+      : []),
 
     {
       key: "status",
