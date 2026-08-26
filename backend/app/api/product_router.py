@@ -15,6 +15,8 @@ from app.database.database import get_db
 from app.utils.auth import get_current_user
 from app.ai.ocr import process_input
 from app.models.product import Product
+from app.ai.product_embedding import create_product_embedding
+
 
 from app.services.product_ai_extractor import (
     extract_products_with_ai
@@ -41,70 +43,105 @@ def extract_products_from_text(text: str):
         if line.strip()
     ]
 
-    # Find the line where actual products start
+    print("========== NORMAL EXTRACTION DEBUG ==========")
+    print("Total lines:", len(lines))
+
+    # Find first SKU
     start_index = None
 
     for i, line in enumerate(lines):
 
-        # Product SKU pattern
-        if re.match(
-            r"^[A-Z0-9]+-[A-Z0-9]+-[A-Z0-9]+$",
-            line
-        ):
+        # Matches PUMP-001, ELEC-002, PAINT-001, etc.
+        if re.match(r"^[A-Za-z]+-\d+$", line.strip()):
 
             start_index = i
+
+            print("First SKU found:", line)
+            print("Start index:", start_index)
+
             break
 
-    # No product SKU found
     if start_index is None:
-        return products
 
-    # Get only product data
+        print("ERROR: No SKU found")
+
+        return []
+
     product_lines = lines[start_index:]
 
-    # Each product has 6 fields
-    for i in range(0, len(product_lines), 6):
+    print("Product data lines:", len(product_lines))
 
-        row = product_lines[i:i + 6]
+    # Each product contains 7 fields:
+    # SKU, Category, Product Name, Unit,
+    # GST, Cost Price, Selling Price
 
-        # Make sure complete product exists
-        if len(row) < 6:
+    for i in range(0, len(product_lines), 7):
+
+        row = product_lines[i:i + 7]
+
+        if len(row) != 7:
+
+            print("Skipping incomplete row:", row)
+
             continue
 
         try:
 
+            sku = row[0].strip()
+
+            # Validate SKU
+            if not re.match(
+                r"^[A-Za-z]+-\d+$",
+                sku
+            ):
+                print("Invalid SKU row:", row)
+                continue
+
             product = {
-
-                "sku": row[0],
-
-                "product_name": row[1],
-
-                "description": row[2],
-
-                "unit": row[3],
-
-                "selling_price": float(
-                    row[4].replace(",", "")
-                ),
-
+                "sku": sku,
+                "category": row[1].strip(),
+                "product_name": row[2].strip(),
+                "description": row[2].strip(),
+                "unit": row[3].strip(),
                 "gst_percentage": float(
-                    row[5].replace("%", "")
+                    row[4]
+                    .replace("%", "")
+                    .strip()
                 ),
-
-                # Default values
-                "category": "General",
-
-                "cost_price": 0.0
+                "cost_price": float(
+                    row[5]
+                    .replace(",", "")
+                    .replace("₹", "")
+                    .strip()
+                ),
+                "selling_price": float(
+                    row[6]
+                    .replace(",", "")
+                    .replace("₹", "")
+                    .strip()
+                )
             }
 
             products.append(product)
 
-        except (ValueError, IndexError):
+            print(
+                f"Extracted: "
+                f"{product['sku']} | "
+                f"{product['product_name']}"
+            )
 
-            continue
+        except Exception as e:
+
+            print(
+                f"Error extracting row: {row}"
+            )
+
+            print("Error:", str(e))
+
+    print("TOTAL NORMAL PRODUCTS:", len(products))
+    print("============================================")
 
     return products
-
 
 # =========================================================
 # BULK UPLOAD API
@@ -205,6 +242,7 @@ async def bulk_upload_products(
     products = extract_products_from_text(
         extracted_text
     )
+    print("Total products found:", len(products))
 
 
     # If normal extraction fails, use AI
@@ -354,6 +392,7 @@ async def bulk_upload_products(
             db.refresh(
                 new_product
             )
+            create_product_embedding(new_product)
 
 
             # ---------------------------------------------

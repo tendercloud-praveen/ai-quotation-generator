@@ -66,11 +66,12 @@ def create_product(
     db.add(new_product)
     db.commit()
     db.refresh(new_product)
+    create_product_embedding(new_product)
 
 
     # 2. Create embedding and store in Qdrant
 
-    create_product_embedding(new_product)
+    # c
 
 
     # 3. Return product
