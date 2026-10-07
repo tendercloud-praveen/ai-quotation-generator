@@ -1,5 +1,6 @@
 import os
 import json
+import re
 
 from dotenv import load_dotenv
 from langchain_groq import ChatGroq
@@ -20,221 +21,456 @@ def extract_products_with_ai(text: str):
     llm = ChatGroq(
         model="openai/gpt-oss-20b",
         temperature=0,
-        api_key=api_key
+        api_key=api_key,
+        max_tokens=1500
     )
 
-    prompt = f"""
-You are a highly accurate product table extraction system.
+    # ==========================================================
+    # SPLIT DOCUMENT INTO PRODUCT SECTIONS
+    # ==========================================================
 
-Your job is to extract EVERY individual product/item from the document.
+    # Handles formats such as:
+    #
+    # Product ID
+    # CON-001
+    #
+    # Product ID
+    # IT-001
+    #
+    # Product ID
+    # HC-001
 
-========================
-CRITICAL RULES
-========================
+    product_sections = re.split(
+        r'(?=Product\s+ID\s*[:\-]?\s*[A-Za-z0-9_-]+)',
+        text,
+        flags=re.IGNORECASE
+    )
 
-1. Extract EVERY product in the document.
+    product_sections = [
+        section.strip()
+        for section in product_sections
+        if section.strip()
+        and re.search(
+            r'Product\s+ID\s*[:\-]?\s*[A-Za-z0-9_-]+',
+            section,
+            flags=re.IGNORECASE
+        )
+    ]
 
-2. There is NO fixed product limit.
+    # ==========================================================
+    # IF PRODUCT SECTIONS WERE NOT DETECTED
+    # ==========================================================
 
-3. If there are 10 products, return 10.
+    if not product_sections:
 
-4. If there are 100 products, return 100.
+        # Fallback for documents where Product ID is not available.
+        # Split text into manageable chunks.
 
-5. If there are 500 products, return all products that can be
-   reliably extracted from the document.
+        chunk_size = 10000
 
-6. NEVER intentionally stop after 10, 20, or any other number.
+        product_sections = [
+            text[i:i + chunk_size]
+            for i in range(0, len(text), chunk_size)
+        ]
 
-For example, if the document contains:
+    # ==========================================================
+    # GROUP PRODUCTS
+    # ==========================================================
 
-Pumps
-AquaPrime Booster Pump 2HP
-BULK-PDF-1001
-7200
+    # Process maximum 4 products per AI request.
 
-Then:
+    chunks = []
 
-category = "Pumps"
-product_name = "AquaPrime Booster Pump 2HP"
+    for section in product_sections:
+        chunks.append(section)
+    
 
-NOT:
+    print("========== AI EXTRACTION ==========")
+    print(
+        "Product sections detected:",
+        len(product_sections)
+    )
+    print(
+        "AI requests:",
+        len(chunks)
+    )
+    print("===================================")
 
-product_name = "Pumps"
+    all_products = []
 
-========================
-FIELD MAPPING
-========================
+    # ==========================================================
+    # PROCESS EACH GROUP
+    # ==========================================================
 
-SKU fields:
-- SKU
-- SKU Number
-- Item Code
-- Product Code
-- Code
+    for chunk_index, chunk in enumerate(
+        chunks,
+        start=1
+    ):
 
-Product Name fields:
-- Product Name
-- Item Name
-- Product
-- Item
-- Material
-- Material Name
+        print(
+            f"Processing AI group "
+            f"{chunk_index}/{len(chunks)}..."
+        )
 
-Description fields:
-- Description
-- Details
-- Specification
-- Product Details
-- Item Details
+        prompt = f"""
+You are a highly accurate real-world product extraction system.
 
-Unit fields:
-- Unit
-- UOM
-- Unit of Measure
+Extract EVERY actual product from the document section below.
 
-Selling Price fields:
-- Price
-- Rate
-- Selling Price
-- Unit Price
-- Amount
-
-GST fields:
-- GST
-- GST %
-- GST Percentage
-- Tax
-- Tax %
-
-Category fields:
-- Category
-- Product Category
-- Product Type
-- Type
-
-Cost Price fields:
-- Cost Price
-- Cost
-- Purchase Price
-- Buying Price
-
-
-========================
-CATEGORY RULE
-========================
-
-If category is explicitly present, use it.
-
-If category is NOT explicitly present, determine a reasonable category
-from the product name and description.
+The document can belong to ANY industry.
 
 Examples:
 
-Laptop, Computer, Monitor, Keyboard, Mouse, Printer
-→ Electronics
+Construction
+IT
+Healthcare
+Automotive
+Electronics
+Electrical
+Manufacturing
+Agriculture
+Pharmaceuticals
+Food & Beverage
+Retail
+Logistics
+Machinery
+Plumbing
+Safety Equipment
+Office Supplies
+Medical Equipment
+Telecommunications
+Industrial Equipment
+and any other industry.
 
-Cement, Steel, Bricks, Paint, Sand
-→ Construction Materials
+==================================================
+IMPORTANT PRODUCT RULE
+==================================================
 
-Pump, Water Pump, Booster Pump
-→ Pumps / Water Equipment
+Extract every actual product.
 
-Pipe, Elbow, Coupler, Plumbing Fitting
-→ Plumbing
+Do NOT treat these as products:
 
-Safety Vest, Helmet, Safety Shoes
-→ Safety Equipment
+- Category headings
+- Industry headings
+- Section headings
+- Column headers
+- Company names
+- Supplier names
+- Addresses
+- Totals
+- Subtotals
+- Page headers
+- Page footers
+- Notes
 
-DO NOT use "General" if a reasonable category can be determined.
+==================================================
+FIELD MAPPING
+==================================================
 
-Use "General" ONLY when the category genuinely cannot be determined.
+SKU can appear as:
 
+SKU
+SKU Number
+Item Code
+Item ID
+Product Code
+Product ID
+Material Code
+Part Number
+Part No
+Reference Number
+Stock Code
+Article Number
+Code
 
-========================
-DESCRIPTION RULE
-========================
+Map to:
 
-If the document contains a description, specification, or details:
-- Preserve that information.
-- Do not invent information.
+"sku"
 
-If no description exists:
-- Create a short description using only information available
-  in the document.
-- Do not invent brand, model, size, color, material, or specifications.
+--------------------------------------------------
 
+PRODUCT NAME can appear as:
 
-========================
-IMPORTANT TABLE RULE
-========================
+Product Name
+Item Name
+Product
+Item
+Material
+Material Name
+Article
+Part Name
+Equipment Name
+Model Name
 
-When the document contains a table:
+Map to:
 
-Read the table row by row.
+"product_name"
 
-EVERY PRODUCT ROW MUST BE EXTRACTED.
+IMPORTANT:
 
-Do not treat:
-- section headings
-- category headings
-- column headers
-- page headers
-- page footers
-- company names
-- addresses
-- totals
-
-as products.
-
-If a category heading appears above several products, apply that category
-to the products underneath it.
+Never use a category heading as product_name.
 
 Example:
 
 Pumps
-1 | BULK-001 | AquaPrime Booster Pump 2HP | Nos | 7200
-2 | BULK-002 | AquaPrime Water Pump 1HP | Nos | 4500
 
-Correct result:
+AquaPrime Booster Pump 2HP
+BULK-001
 
-[
-    {{
-        "sku": "BULK-001",
-        "product_name": "AquaPrime Booster Pump 2HP",
-        "category": "Pumps"
-    }},
-    {{
-        "sku": "BULK-002",
-        "product_name": "AquaPrime Water Pump 1HP",
-        "category": "Pumps"
-    }}
-]
+Correct:
 
-NOT:
+"product_name": "AquaPrime Booster Pump 2HP"
+"category": "Pumps"
 
-[
-    {{
-        "product_name": "Pumps"
-    }}
-]
+--------------------------------------------------
 
+DESCRIPTION can appear as:
 
-========================
-FINAL CHECK BEFORE RESPONSE
-========================
+Description
+Product Description
+Item Description
+Details
+Product Details
+Item Details
+Overview
+Remarks
+Notes
 
-Before returning JSON:
+Map to:
 
-1. Count every product row in the document.
-2. Make sure every product row has a JSON object.
-3. Make sure category headings are NOT product names.
-4. Make sure duplicate products are not accidentally created.
-5. Do not omit products because some fields are missing.
-6. Missing fields must still produce a product object.
+"description"
+
+--------------------------------------------------
+
+UNIT can appear as:
+
+Unit
+UOM
+Unit of Measure
+Measurement Unit
+Pack
+Package
+Quantity Unit
+
+Map to:
+
+"unit"
+
+Example:
+
+Rs. 410 / bag
+
+Return:
+
+"selling_price": 410.0
+"unit": "bag"
+
+--------------------------------------------------
+
+SELLING PRICE can appear as:
+
+Selling Price
+Sale Price
+Sales Price
+Selling Rate
+Sale Rate
+Sales Rate
+Unit Price
+Retail Price
+Customer Price
+List Price
+Rate
+Price
+Amount
+
+Map to:
+
+"selling_price"
+
+--------------------------------------------------
+
+COST PRICE can appear as:
+
+Cost Price
+Cost
+Cost Rate
+Purchase Price
+Purchase Cost
+Purchase Rate
+Buying Price
+Buying Rate
+Supplier Price
+Vendor Price
+
+Map to:
+
+"cost_price"
+
+--------------------------------------------------
+
+GST / TAX can appear as:
+
+GST
+GST %
+GST Percentage
+GST Rate
+Tax
+Tax %
+Tax Percentage
+Tax Rate
+VAT
+VAT %
+
+Map to:
+
+"gst_percentage"
+
+Return only the numeric value.
+
+Example:
+
+18% -> 18.0
+
+--------------------------------------------------
+
+CATEGORY / INDUSTRY can appear as:
+
+Category
+Product Category
+Product Type
+Type
+Industry
+Industry Type
+Department
+Segment
+Product Group
+Product Family
+Classification
+
+Map to:
+
+"category"
+
+If the document explicitly provides Industry or Category,
+use that value.
+
+If no category is present, determine a reasonable category
+from the product name and description.
+
+Do not use "General" if a reasonable category can be determined.
+
+--------------------------------------------------
+
+SUPPLIER can appear as:
+
+Supplier
+Supplier Name
+Vendor
+Vendor Name
+Manufacturer
+Manufacturer Name
+
+Map to:
+
+"supplier"
+
+--------------------------------------------------
+
+SPECIFICATIONS can appear as:
+
+Specifications
+Specification
+Specs
+Technical Specifications
+Technical Details
+Features
+Product Features
+Attributes
+Characteristics
+
+Map to:
+
+"specifications"
+
+Preserve useful industry-specific information.
+
+Examples:
+
+Laptop:
+16 GB RAM; 512 GB SSD; Intel Core i7
+
+Cement:
+50 kg bag; OPC 53 Grade
+
+Medical equipment:
+ECG; SpO2; NIBP
+
+Electrical:
+230V; 5KW; 3 Phase
+
+Automotive:
+Compatible with Model X; Part No ABC123
+
+Do not invent information.
+
+==================================================
+PRICE RULE
+==================================================
+
+Convert prices to numbers.
+
+Examples:
+
+Rs. 410 -> 410.0
+
+₹410 -> 410.0
+
+₹61,000 -> 61000.0
+
+Rs. 62,000 / tonne -> 62000.0
+
+Remove currency symbols and commas.
+
+==================================================
+MISSING FIELDS
+==================================================
+
+If a text field is missing:
+
+""
+
+If a numeric field is missing:
+
+0.0
+
+Do not skip the product.
+
+Do not invent information.
+
+==================================================
+DUPLICATES
+==================================================
+
+Do not create duplicates.
+
+Repeated page headers or repeated information
+must not become duplicate products.
+
+==================================================
+OUTPUT
+==================================================
 
 Return ONLY valid JSON.
 
-Use exactly this format:
+Do NOT return:
+
+- Markdown
+- ```json
+- Explanation
+- Comments
+- Extra text
+
+Return this structure:
 
 [
     {{
@@ -245,55 +481,241 @@ Use exactly this format:
         "selling_price": 0.0,
         "gst_percentage": 0.0,
         "category": "",
-        "cost_price": 0.0
+        "cost_price": 0.0,
+        "supplier": "",
+        "specifications": ""
     }}
 ]
 
-If a string field is unavailable:
-""
+==================================================
+DOCUMENT SECTION
+==================================================
 
-If a numeric field is unavailable:
-0
-
-========================
-DOCUMENT TEXT
-========================
-
-{text}
+{chunk}
 """
 
-    response = llm.invoke(prompt)
+        try:
 
-    result = response.content.strip()
+            response = llm.invoke(prompt)
 
-    if result.startswith("```json"):
-        result = result.replace("```json", "", 1)
+            result = response.content.strip()
 
-    if result.startswith("```"):
-        result = result.replace("```", "", 1)
+            # ------------------------------------------
+            # Remove Markdown fences
+            # ------------------------------------------
 
-    if result.endswith("```"):
-        result = result[:-3]
+            if result.startswith("```json"):
+                result = result[7:]
 
-    result = result.strip()
+            elif result.startswith("```"):
+                result = result[3:]
 
-    try:
-        products = json.loads(result)
+            if result.endswith("```"):
+                result = result[:-3]
 
-    except json.JSONDecodeError:
-        raise ValueError(
-            "AI could not return valid product JSON"
+            result = result.strip()
+
+            # ------------------------------------------
+            # Find JSON array
+            # ------------------------------------------
+
+            start = result.find("[")
+            end = result.rfind("]")
+
+            if start == -1 or end == -1:
+
+                print(
+                    f"WARNING: AI group "
+                    f"{chunk_index} did not return JSON"
+                )
+
+                print("RAW RESPONSE:")
+                print(result)
+
+                continue
+
+            json_text = result[
+                start:end + 1
+            ]
+
+            products = json.loads(
+                json_text
+            )
+
+            if not isinstance(
+                products,
+                list
+            ):
+                print(
+                    f"WARNING: AI group "
+                    f"{chunk_index} returned invalid list"
+                )
+
+                continue
+
+            # ------------------------------------------
+            # Normalize products
+            # ------------------------------------------
+
+            for product in products:
+
+                if not isinstance(
+                    product,
+                    dict
+                ):
+                    continue
+
+                product_name = str(
+                    product.get(
+                        "product_name",
+                        ""
+                    )
+                ).strip()
+
+                if not product_name:
+                    continue
+
+                normalized_product = {
+                    "sku": str(
+                        product.get(
+                            "sku",
+                            ""
+                        )
+                    ).strip(),
+
+                    "product_name": product_name,
+
+                    "description": str(
+                        product.get(
+                            "description",
+                            ""
+                        )
+                    ).strip(),
+
+                    "unit": str(
+                        product.get(
+                            "unit",
+                            ""
+                        )
+                    ).strip(),
+
+                    "selling_price": product.get(
+                        "selling_price",
+                        0.0
+                    ),
+
+                    "gst_percentage": product.get(
+                        "gst_percentage",
+                        0.0
+                    ),
+
+                    "category": str(
+                        product.get(
+                            "category",
+                            ""
+                        )
+                    ).strip(),
+
+                    "cost_price": product.get(
+                        "cost_price",
+                        0.0
+                    ),
+
+                    "supplier": str(
+                        product.get(
+                            "supplier",
+                            ""
+                        )
+                    ).strip(),
+
+                    "specifications": str(
+                        product.get(
+                            "specifications",
+                            ""
+                        )
+                    ).strip()
+                }
+
+                all_products.append(
+                    normalized_product
+                )
+
+        except json.JSONDecodeError as e:
+
+            print(
+                f"JSON error in AI group "
+                f"{chunk_index}: {e}"
+            )
+
+            print(
+                "RAW AI RESPONSE:"
+            )
+            print(result)
+
+        except Exception as e:
+
+            print(
+                f"Error in AI group "
+                f"{chunk_index}: {e}"
+            )
+
+    # ==========================================================
+    # REMOVE DUPLICATES
+    # ==========================================================
+
+    unique_products = []
+
+    seen = set()
+
+    for product in all_products:
+
+        sku = product.get(
+            "sku",
+            ""
+        ).strip()
+
+        name = product.get(
+            "product_name",
+            ""
+        ).strip()
+
+        if sku:
+
+            key = sku.lower()
+
+        else:
+
+            key = name.lower()
+
+        if key in seen:
+            continue
+
+        seen.add(key)
+
+        unique_products.append(
+            product
         )
 
-    if not isinstance(products, list):
-        raise ValueError(
-            "AI response must be a list of products"
-        )
+    # ==========================================================
+    # FINAL OUTPUT
+    # ==========================================================
 
-    print("========== AI PRODUCT EXTRACTION ==========")
-    print("Total products extracted:", len(products))
+    products = unique_products
 
-    for index, product in enumerate(products, start=1):
+    print(
+        "========== AI PRODUCT EXTRACTION =========="
+    )
+
+    print(
+        "Total products extracted:",
+        len(products)
+    )
+
+    for index, product in enumerate(
+        products,
+        start=1
+    ):
+
         print(
             f"{index}. "
             f"{product.get('product_name')} | "
@@ -301,6 +723,14 @@ DOCUMENT TEXT
             f"{product.get('sku')}"
         )
 
-    print("===========================================")
+    print(
+        "==========================================="
+    )
+
+    if not products:
+
+        raise ValueError(
+            "AI could not extract any products"
+        )
 
     return products

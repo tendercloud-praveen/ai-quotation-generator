@@ -130,6 +130,8 @@ export default function ApprovalsPage() {
       customerName:
         quotation?.customer_name ??
         customer?.name ??
+        customer?.company_name ??
+        customer?.contact_person ??
         customer?.full_name ??
         customer?.fullName ??
         "—",
@@ -163,7 +165,12 @@ export default function ApprovalsPage() {
 
         unit: item?.unit ?? "",
 
-        sellingPrice: Number(item?.unit_price ?? item?.sellingPrice ?? 0),
+        sellingPrice: Number(
+          item?.unit_price ??
+            item?.selling_price ??
+            item?.sellingPrice ??
+            0,
+        ),
 
         costPrice: Number(item?.cost_price ?? item?.costPrice ?? 0),
 
@@ -180,18 +187,32 @@ export default function ApprovalsPage() {
         sku: item?.sku ?? "",
       })),
 
-      subtotal: Number(quotation?.subtotal ?? 0),
+      subtotal: Number(
+        quotation?.subtotal ?? quotation?.summary?.subtotal ?? 0,
+      ),
 
-      tax: Number(quotation?.total_gst ?? quotation?.tax ?? 0),
+      tax: Number(
+        quotation?.total_gst ??
+          quotation?.summary?.total_gst ??
+          quotation?.tax ??
+          0,
+      ),
 
-      grandTotal: Number(quotation?.grand_total ?? quotation?.grandTotal ?? 0),
+      grandTotal: Number(
+        quotation?.grand_total ??
+          quotation?.summary?.grand_total ??
+          quotation?.grandTotal ??
+          0,
+      ),
 
       margin: Number(quotation?.margin ?? 0),
 
       marginPercentage: Number(
         quotation?.margin_percentage ?? quotation?.marginPercentage ?? 0,
       ),
-      status: String(quotation?.status ?? "").toLowerCase(),
+      status: String(
+        quotation?.status ?? quotation?.quotation_status ?? "",
+      ).toLowerCase(),
 
       assignedManagerId: quotation?.manager_id ?? quotation?.managerId,
 
@@ -276,12 +297,21 @@ export default function ApprovalsPage() {
    * /quotation-approval/{quotation_id}
    */
 
-  const refreshQuotationDetails = async (quotationId) => {
+  const refreshQuotationDetails = async (quotationId, fallbackQuotation = {}) => {
     const response = await getQuotationApprovalDetailsApi(quotationId);
 
     console.log("GET quotation details:", response);
 
-    const fresh = normalizeQuotation(response);
+    const normalizedResponse = normalizeQuotation(response);
+
+    const fresh = {
+      ...fallbackQuotation,
+      ...normalizedResponse,
+      customerName:
+        normalizedResponse.customerName !== "—"
+          ? normalizedResponse.customerName
+          : fallbackQuotation.customerName || "—",
+    };
 
     setQuotations((previous) => {
       const exists = previous.some((q) => q.id === fresh.id);
@@ -358,7 +388,7 @@ export default function ApprovalsPage() {
        * Always get latest DB data.
        */
 
-      const fresh = await refreshQuotationDetails(quotation.id);
+      const fresh = await refreshQuotationDetails(quotation.id, quotation);
 
       setActionModal({
         quotation: fresh,
@@ -550,7 +580,7 @@ export default function ApprovalsPage() {
     try {
       setActionLoading(true);
 
-      const fresh = await refreshQuotationDetails(quotation.id);
+      const fresh = await refreshQuotationDetails(quotation.id, quotation);
 
       setEditPrices({
         id: fresh.id,
@@ -1004,7 +1034,12 @@ export default function ApprovalsPage() {
                         </td>
 
                         <td className="px-3 py-2 text-right">
-                          {formatINR(line.sellingPrice)}
+                          {formatINR(
+                            line.sellingPrice ??
+                              line.selling_price ??
+                              line.unit_price ??
+                              0,
+                          )}
                         </td>
 
                         <td className="px-3 py-2 text-right text-emerald-600">
