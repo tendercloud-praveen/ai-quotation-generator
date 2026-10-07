@@ -8,6 +8,7 @@ from sqlalchemy.orm import Session
 from app.database.database import get_db
 from app.models.quotations import Quotation, QuotationItem
 from app.models.product import Product
+from app.models.customer import Customer
 from app.models.user import User
 from app.utils.auth import get_current_user
 
@@ -76,6 +77,11 @@ def check_manager_access(
     Only the manager assigned to the quotation
     can manage the quotation.
     """
+
+    is_admin = (current_user.role or "").lower() == "admin"
+
+    if is_admin and quotation.company_id == current_user.company_id:
+        return
 
     if quotation.manager_id != current_user.id:
         raise HTTPException(
@@ -285,6 +291,19 @@ def get_quotation_details(
         current_user
     )
 
+    customer = (
+        db.query(Customer)
+        .filter(Customer.id == quotation.customer_id)
+        .first()
+    )
+
+    customer_name = (
+        getattr(customer, "company_name", None)
+        or getattr(customer, "contact_person", None)
+        if customer
+        else "—"
+    )
+
     items = (
         db.query(QuotationItem)
         .filter(
@@ -301,9 +320,7 @@ def get_quotation_details(
             item.quantity
         )
 
-        unit_price = float(
-            item.unit_price
-        )
+        unit_price = float(item.unit_price or 0)
 
 
 
@@ -357,6 +374,7 @@ def get_quotation_details(
             "margin": margin,
 
             "gst_percentage": gst_percentage,
+            "selling_price": unit_price,
 
             "subtotal": subtotal,
 
@@ -427,6 +445,15 @@ def get_quotation_details(
         "quotation_number": quotation.quotation_number,
 
         "inquiry_text": quotation.inquiry_text,
+
+        "customer_id": quotation.customer_id,
+
+        "customer_name": customer_name,
+
+        "customer": {
+            "id": quotation.customer_id,
+            "name": customer_name
+        },
 
         "created_by": {
             "user_id": quotation.user_id,
